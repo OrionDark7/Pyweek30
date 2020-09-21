@@ -1,13 +1,51 @@
 import pygame
-from game import objects, entities
+from game import objects, entities, ui
 
 pygame.init()
 window = pygame.display.set_mode([1280, 720])
 clock = pygame.time.Clock()
 
+p = {"a" : "./assets/", "g" : "./assets/graphics/"}
+
+class Mouse(pygame.sprite.Sprite):
+    def __init__(self):
+        self.image = pygame.surface.Surface([1,1])
+        self.rect = self.image.get_rect()
+        self.rect.topleft = pygame.mouse.get_pos()
+    def update(self):
+        self.rect.topleft = pygame.mouse.get_pos()
+
+class Highlight(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.surface.Surface([40, 40])
+        self.image.fill([255, 255, 255])
+        self.image.set_alpha(84)
+        self.rect = self.image.get_rect()
+        self.rect.center = 20, 20
+    def draw(self):
+        global window
+        window.blit(self.image, self.rect.topleft)
+    def update(self, tilegrp):
+        global mouse
+        if pygame.sprite.spritecollide(mouse, tilegrp, False):
+            self.rect.center = pygame.sprite.spritecollide(mouse, tilegrp, False)[0].rect.center
+
+mouse = Mouse()
+highlight = Highlight()
+
 running = True
 screen = "game"
 fps = 60 #hopefully
+
+cash = 1000
+wave = 1
+wavestarted = False
+building = None
+buildimg = None
+buildingcosts = {"shooter" : 100}
+buildindex = 0
+builds = ["shooter", ""]
 
 bulletgrp = pygame.sprite.Group()
 enemygrp = pygame.sprite.Group()
@@ -16,23 +54,55 @@ tilemap = pygame.sprite.Group()
 towergrp = pygame.sprite.Group()
 tilemap, towergrp = objects.GenerateMap()
 
-enemy = entities.Enemy([640.0, 360.0], [20, 120])
-enemygrp.add(enemy)
-
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        if event.type == pygame.MOUSEMOTION:
+            mouse.update()
+            highlight.update(tilemap)
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if building != None:
+                if cash >= buildingcosts[building]:
+                    towergrp.add(objects.Tower(highlight.rect.center, building))
+                    cash -= buildingcosts[building]
+                else:
+                    pass #trigger message - not enough money!
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_b and building == None:
+                building = "shooter"
+                buildimg = pygame.image.load(p["g"] + building + ".png")
+                buildrect = buildimg.get_rect()
+                buildrect = [-(buildrect.width/2), -(buildrect.height/2)]
+            elif event.key == pygame.K_b and building != None:
+                building = None
+                buildimg = None
+            if event.key == pygame.K_LEFT and building != None:
+                #prev item in build menu
+                pass
+            if event.key == pygame.K_RIGHT and building != None:
+                # prev item in build menu
+                pass
     if screen == "game":
         window.fill([255, 255, 255])
+
         tilemap.draw(window)
-        towergrp.draw(window)
         bulletgrp.draw(window)
+        towergrp.draw(window)
         enemygrp.draw(window)
+
+        if building != None:
+            window.blit(buildimg, [highlight.rect.centerx + buildrect[0], highlight.rect.centery + buildrect[1]])
+        else:
+            highlight.draw()
+
+        ui.text("cash - " + str(cash), [5, 5], window)
+        ui.text("wave " + str(wave), [5, 22], window)
+
         towergrp.update(bulletgrp, enemygrp, clock)
         bulletgrp.update(enemygrp)
         enemygrp.update(fps)
-        print(enemygrp)
+
     pygame.display.flip()
     clock.tick(60)
     fps = clock.get_fps()

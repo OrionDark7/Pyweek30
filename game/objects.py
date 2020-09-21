@@ -15,14 +15,17 @@ def GenerateMap():
         for y in range(18):
             NewTile = Tile([x*40, y*40], "regular")
             TileGroup.add(NewTile)
-    TowerGroup.add(Tower([20, 60], "shooter"))
+    TowerGroup.add(Tower([40, 360], "base"))
+    TowerGroup.add(Tower([20, 420], "shooter"))
+    TowerGroup.add(Tower([20, 300], "shooter"))
+
 
     return TileGroup, TowerGroup
 
 class Tile(pygame.sprite.Sprite):
     def __init__(self, position, type, occupied=False):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.surface.Surface([40, 40])
+        self.image = pygame.image.load("./assets/graphics/tile.png")
         self.rect = self.image.get_rect()
         self.rect.left, self.rect.top = position
         self.type = str(type)
@@ -33,7 +36,7 @@ class Tile(pygame.sprite.Sprite):
 class Tower(pygame.sprite.Sprite):
     def __init__(self, position, type):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load("./assets/graphics/img2.png")
+        self.image = pygame.image.load("./assets/graphics/"+type+".png")
         self.originalimage = self.image
         self.rect = self.image.get_rect()
         self.rect.center = position
@@ -69,7 +72,8 @@ class Tower(pygame.sprite.Sprite):
                     if len(sprites) > 1:
                         spritedistances = []
                         for sprite in sprites:
-                            distance = math.sqrt((sprite.rect.centerx - self.rect.centerx)^2 + (sprite.rect.centery - self.rect.centery)^2)
+                            print(abs((sprite.rect.centerx - self.rect.centerx)^2 + (sprite.rect.centery - self.rect.centery)^2))
+                            distance = math.sqrt(abs((sprite.rect.centerx - self.rect.centerx)^2 + (sprite.rect.centery - self.rect.centery)^2))
                             spritedistances.append(distance)
                         shortest = min(spritedistances)
                         sidx = spritedistances.index(shortest)

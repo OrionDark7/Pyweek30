@@ -34,7 +34,5 @@ class Enemy(pygame.sprite.Sprite):
         oldc = self.rect.center
         self.rect = self.image.get_rect()
         self.rect.center = oldc
-        print(self.health)
         if self.health <= 0:
             self.kill()
-            print(self.alive())
