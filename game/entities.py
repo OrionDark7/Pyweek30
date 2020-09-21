@@ -13,6 +13,7 @@ class Enemy(pygame.sprite.Sprite):
         self.velocity = Vector2(target[0] - self.rect.centerx, target[1] - self.rect.centery).normalize()
         self.rotation = 0
         self.health = 50
+    def pathfinding(self, listmap):
     def update(self, fps):
         try:
             self.velocity = Vector2(self.target[0] - self.rect.centerx, self.target[1] - self.rect.centery).normalize() * fps * 0.05

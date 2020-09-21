@@ -1,7 +1,7 @@
 import pygame, math
 from pygame.math import Vector2
 
-towers = {"shooter" : [500, 600, 50], "base" : [0, 0, 250]}
+towers = {"shooter" : [500, 600, 50], "base" : [0, 0, 250], "wall" : [0, 0, 100]}
 bullets = {"shooter" : [10]}
 #name - speed (ms/action), range (pixels), hp
 #name - damage
@@ -10,17 +10,18 @@ def GenerateMap():
     #just blank for now, maybe add presets later? 9.19.2020
     TileGroup = pygame.sprite.Group()
     TowerGroup = pygame.sprite.Group()
+    listmap = []
 
     for x in range(32):
+        listmap.append([])
         for y in range(18):
+            listmap[x].append(0)
             NewTile = Tile([x*40, y*40], "regular")
             TileGroup.add(NewTile)
     TowerGroup.add(Tower([40, 360], "base"))
     TowerGroup.add(Tower([20, 420], "shooter"))
     TowerGroup.add(Tower([20, 300], "shooter"))
-
-
-    return TileGroup, TowerGroup
+    return TileGroup, TowerGroup, listmap
 
 class Tile(pygame.sprite.Sprite):
     def __init__(self, position, type, occupied=False):
@@ -29,12 +30,13 @@ class Tile(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.left, self.rect.top = position
         self.type = str(type)
+        self.gpos = [self.rect.left/40, self.rect.top/40]
         self.occupied = False
     def update(self):
         pass
 
 class Tower(pygame.sprite.Sprite):
-    def __init__(self, position, type):
+    def __init__(self, position, type, gamepos):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.image.load("./assets/graphics/"+type+".png")
         self.originalimage = self.image
@@ -44,6 +46,7 @@ class Tower(pygame.sprite.Sprite):
         self.attributes = towers[self.type]
         self.rotation = 0
         self.target = None
+        self.gpos = list(gamepos)
         self.cooldown = self.attributes[0]
         self.rangesurface = self.rect
         if self.type.startswith("shooter"):

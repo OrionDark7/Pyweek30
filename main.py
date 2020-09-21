@@ -31,6 +31,13 @@ class Highlight(pygame.sprite.Sprite):
         if pygame.sprite.spritecollide(mouse, tilegrp, False):
             self.rect.center = pygame.sprite.spritecollide(mouse, tilegrp, False)[0].rect.center
 
+def switchbuild():
+    global building, buildimg, buildrect, buildindex
+    building = builds[buildindex]
+    buildimg = pygame.image.load(p["g"] + building + ".png")
+    buildrect = buildimg.get_rect()
+    buildrect = [-(buildrect.width / 2), -(buildrect.height / 2)]
+
 mouse = Mouse()
 highlight = Highlight()
 
@@ -43,16 +50,17 @@ wave = 1
 wavestarted = False
 building = None
 buildimg = None
-buildingcosts = {"shooter" : 100}
+buildingcosts = {"shooter" : 100, "wall" : 75}
 buildindex = 0
-builds = ["shooter", ""]
+builds = ["shooter", "wall"]
 
 bulletgrp = pygame.sprite.Group()
 enemygrp = pygame.sprite.Group()
 
 tilemap = pygame.sprite.Group()
 towergrp = pygame.sprite.Group()
-tilemap, towergrp = objects.GenerateMap()
+listmap = []
+tilemap, towergrp, listmap = objects.GenerateMap()
 
 while running:
     for event in pygame.event.get():
@@ -70,19 +78,23 @@ while running:
                     pass #trigger message - not enough money!
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_b and building == None:
-                building = "shooter"
-                buildimg = pygame.image.load(p["g"] + building + ".png")
-                buildrect = buildimg.get_rect()
-                buildrect = [-(buildrect.width/2), -(buildrect.height/2)]
+                buildindex = 0
+                switchbuild()
             elif event.key == pygame.K_b and building != None:
                 building = None
                 buildimg = None
             if event.key == pygame.K_LEFT and building != None:
-                #prev item in build menu
-                pass
+                if buildindex == 0:
+                    buildindex = len(builds)-1
+                else:
+                    buildindex -= 1
+                switchbuild()
             if event.key == pygame.K_RIGHT and building != None:
-                # prev item in build menu
-                pass
+                if buildindex == len(builds)-1:
+                    buildindex = 0
+                else:
+                    buildindex += 1
+                switchbuild()
     if screen == "game":
         window.fill([255, 255, 255])
 
