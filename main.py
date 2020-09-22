@@ -38,6 +38,12 @@ def switchbuild():
     buildrect = buildimg.get_rect()
     buildrect = [-(buildrect.width / 2), -(buildrect.height / 2)]
 
+def Enemy(pos):
+    global enemygrp, listmap
+    newenemy = entities.Enemy([(pos[0]*40)-20, (pos[1]*40)-20], pos, pos)
+    newenemy.targetqueue = newenemy.pathfinding(listmap, [0, 9])
+    enemygrp.add(newenemy)
+
 mouse = Mouse()
 highlight = Highlight()
 
@@ -95,6 +101,11 @@ while running:
                 else:
                     buildindex += 1
                 switchbuild()
+            if event.key == pygame.K_w and not wavestarted:
+                wavestarted = True
+                pygame.time.set_timer(pygame.USEREVENT, 1000)
+        if event.type == pygame.USEREVENT:
+            Enemy([31, 15])
     if screen == "game":
         window.fill([255, 255, 255])
 
