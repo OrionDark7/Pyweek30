@@ -11,6 +11,7 @@ def GenerateMap():
     TileGroup = pygame.sprite.Group()
     TowerGroup = pygame.sprite.Group()
     listmap = []
+    metadata = {}
 
     for x in range(32):
         listmap.append([])
@@ -19,11 +20,12 @@ def GenerateMap():
             NewTile = Tile([x*40, y*40], "regular")
             TileGroup.add(NewTile)
     TowerGroup.add(Tower([40, 360], "base", [0, 9]))
+    metadata["base"] = [0, 9]
     TowerGroup.add(Tower([20, 420], "shooter",  [0, 11]))
     listmap[0][11] = 1
     TowerGroup.add(Tower([20, 300], "shooter", [0, 8]))
     listmap[0][8] = 1
-    return TileGroup, TowerGroup, listmap
+    return TileGroup, TowerGroup, listmap, metadata
 
 class Tile(pygame.sprite.Sprite):
     def __init__(self, position, type, occupied=False):

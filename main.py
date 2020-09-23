@@ -44,6 +44,23 @@ def Enemy(pos):
     newenemy.targetqueue = newenemy.pathfinding(listmap, [1, 10])
     enemygrp.add(newenemy)
 
+def CheckAccesible(pos):
+    global enemygrp, listmap
+    newenemy = entities.Enemy([(pos[0]*40)-20, (pos[1]*40)-20], pos, pos)
+    newenemy.targetqueue = newenemy.pathfinding(listmap, [1, 10])
+    if newenemy.targetqueue == []:
+        return False
+    else:
+        return True
+
+def GamePos(pos):
+    return [int((pos[0]-20)/40), int((pos[1]-20)/40)]
+
+def drawlistmap():
+    global listmap
+    for line in listmap:
+        print(line)
+
 mouse = Mouse()
 highlight = Highlight()
 
@@ -56,7 +73,7 @@ wave = 1
 wavestarted = False
 building = None
 buildimg = None
-buildingcosts = {"shooter" : 100, "wall" : 75}
+buildingcosts = {"shooter" : 100, "wall" : 25}
 buildindex = 0
 builds = ["shooter", "wall"]
 
@@ -66,7 +83,7 @@ enemygrp = pygame.sprite.Group()
 tilemap = pygame.sprite.Group()
 towergrp = pygame.sprite.Group()
 listmap = []
-tilemap, towergrp, listmap = objects.GenerateMap()
+tilemap, towergrp, listmap, metadata = objects.GenerateMap()
 
 while running:
     for event in pygame.event.get():
@@ -76,12 +93,31 @@ while running:
             mouse.update()
             highlight.update(tilemap)
         if event.type == pygame.MOUSEBUTTONDOWN:
-            if building != None:
-                if cash >= buildingcosts[building]:
-                    towergrp.add(objects.Tower(highlight.rect.center, building))
-                    cash -= buildingcosts[building]
+            print(event.button)
+            if event.button == 1: #LEFT BUTTON
+                if building != None:
+                    if cash >= buildingcosts[building]:
+                        newgpos = GamePos(highlight.rect.center)
+                        towergrp.add(objects.Tower(highlight.rect.center, building, newgpos))
+                        cash -= buildingcosts[building]
+                        if building.startswith("wall"):
+                            listmap[newgpos[0]][newgpos[1]] = 2
+                        else:
+                            listmap[newgpos[0]][newgpos[1]] = 1
+                    else:
+                        pass #trigger message - not enough money!
+            elif event.button == 3 and building != None:
+                if buildindex == len(builds)-1:
+                    buildindex = 0
                 else:
-                    pass #trigger message - not enough money!
+                    buildindex += 1
+                switchbuild()
+            elif event.button == 4 and building != None:
+                if buildindex == 0:
+                    buildindex = len(builds)-1
+                else:
+                    buildindex -= 1
+                switchbuild()
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_b and building == None:
                 buildindex = 0
@@ -89,23 +125,28 @@ while running:
             elif event.key == pygame.K_b and building != None:
                 building = None
                 buildimg = None
-            if event.key == pygame.K_LEFT and building != None:
+            if bool(event.key == pygame.K_LEFT or event.key == pygame.K_DOWN) and building != None:
                 if buildindex == 0:
                     buildindex = len(builds)-1
                 else:
                     buildindex -= 1
                 switchbuild()
-            if event.key == pygame.K_RIGHT and building != None:
+            if bool(event.key == pygame.K_RIGHT or event.key == pygame.K_UP) and building != None:
                 if buildindex == len(builds)-1:
                     buildindex = 0
                 else:
                     buildindex += 1
                 switchbuild()
             if event.key == pygame.K_w and not wavestarted:
-                wavestarted = True
-                pygame.time.set_timer(pygame.USEREVENT, 1000)
+                if CheckAccesible([31, 9]):
+                    wavestarted = True
+                    pygame.time.set_timer(pygame.USEREVENT, 1000)
+                else:
+                    print("Can't reach base!!!")
+            if event.key == pygame.K_l:
+                drawlistmap()
         if event.type == pygame.USEREVENT:
-            Enemy([31, 15])
+            Enemy([31, 9])
     if screen == "game":
         window.fill([255, 255, 255])
 
