@@ -1,7 +1,7 @@
 import pygame, math
 from pygame.math import Vector2
 
-enemies = {"enemy":[1, 50, 0.05, False]}
+enemies = {"enemy":[500, 50, 0.05, False]}
 #cooldown, hp, speed, airborne?
 
 class Enemy(pygame.sprite.Sprite):
@@ -20,7 +20,17 @@ class Enemy(pygame.sprite.Sprite):
         self.gpos = gamepos
         self.health = 50
         self.queue = []
-    def pathfinding(self, listmap, goalpos):
+        self.cooldown = 0
+        self.attributes = enemies["enemy"]
+        self.speed = self.attributes[2]
+        self.effect = None
+    def pathfinding(self, listmap, goalpos, clock):
+        if self.cooldown > 0:
+            self.cooldown -= clock.get_time()
+        if self.cooldown <= 0:
+            if self.effect == "slowness":
+                self.speed = self.attributes[2]
+            self.effect = None
         self.queue = []
         self.visited = {}
         backtraced = []
@@ -90,7 +100,7 @@ class Enemy(pygame.sprite.Sprite):
         return returnval
     def update(self, fps):
         try:
-            self.velocity = Vector2(self.target[0] - self.rect.centerx, self.target[1] - self.rect.centery).normalize() * fps * 0.05
+            self.velocity = Vector2(self.target[0] - self.rect.centerx, self.target[1] - self.rect.centery).normalize() * fps * self.speed
         except:
             pass
         self.position += self.velocity

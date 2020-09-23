@@ -1,7 +1,7 @@
 import pygame, math
 from pygame.math import Vector2
 
-towers = {"shooter" : [500, 600, 50], "base" : [0, 0, 250], "wall" : [0, 0, 100]}
+towers = {"shooter" : [500, 600, 50], "base" : [0, 0, 250], "wall" : [0, 0, 100], "healer" : [5000, 190, 50], "fxf_slowness" : [10000, 280, 100]}
 bullets = {"shooter" : [10]}
 #name - speed (ms/action), range (pixels), hp
 #name - damage
@@ -53,10 +53,16 @@ class Tower(pygame.sprite.Sprite):
         self.gpos = list(gamepos)
         self.cooldown = self.attributes[0]
         self.rangesurface = self.rect
+        self.health = self.attributes[2]
+        self.maxhealth = self.health
         if self.type.startswith("shooter"):
             self.rangesurface = pygame.surface.Surface([self.attributes[1], self.attributes[1]])
             self.rangesurface = self.rangesurface.get_rect()
-    def update(self, bulletgrp, enemygrp, clock):
+    def heal(self, rate):
+        self.health+=rate
+        if self.health > self.maxhealth:
+            self.health = self.maxhealth
+    def update(self, bulletgrp, enemygrp, towergrp, clock):
         self.cooldown -= clock.get_time()
         if self.target != None:
             if not self.target.alive():
@@ -68,6 +74,25 @@ class Tower(pygame.sprite.Sprite):
                 pos = (self.rect.centerx + self.velocity.x*10, self.rect.centery + self.velocity.y*10)
                 newbullet = Bullet(self, pos, self.velocity, self.rotation)
                 bulletgrp.add(newbullet)
+            elif self.type.startswith("healer"):
+                oldrect = self.rect
+                self.rect = self.rangesurface
+                self.rect.center = oldrect.center
+                if pygame.sprite.spritecollide(self, towergrp, False):
+                    sprites = pygame.sprite.spritecollide(self, towergrp, False)
+                    for s in sprites:
+                        s.heal(2)
+                self.rect = oldrect
+            elif self.type.startswith("fxf"):
+                oldrect = self.rect
+                self.rect = self.rangesurface
+                self.rect.center = oldrect.center
+                if pygame.sprite.spritecollide(self, enemygrp, False):
+                    sprites = pygame.sprite.spritecollide(self, enemygrp, False)
+                    for s in sprites:
+                        if self.type == "fxf_slowness":
+                            s.speed = s.speed*0.9
+                self.rect = oldrect
             self.cooldown = self.attributes[0]
         if self.type.startswith("shooter"):
             if self.target == None:

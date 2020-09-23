@@ -1,6 +1,8 @@
 import pygame
 from game import objects, entities, ui
 
+#Page w/Font Used: https://www.dafont.com/8-bit-pusab.font?l[]=10&l[]=1
+
 pygame.init()
 window = pygame.display.set_mode([1280, 720])
 clock = pygame.time.Clock()
@@ -73,7 +75,7 @@ wave = 1
 wavestarted = False
 building = None
 buildimg = None
-buildingcosts = {"shooter" : 100, "wall" : 25}
+buildingcosts = {"shooter" : 100, "wall" : 25, "healer" : 250, "fxf_slowness" : 600}
 buildindex = 0
 builds = ["shooter", "wall"]
 
@@ -160,12 +162,12 @@ while running:
         else:
             highlight.draw()
 
-        ui.text("cash - " + str(cash), [5, 5], window)
+        ui.text("cash - " + str(cash), [5, 0], window)
         ui.text("wave " + str(wave), [5, 22], window)
 
-        towergrp.update(bulletgrp, enemygrp, clock)
+        towergrp.update(bulletgrp, enemygrp, towergrp, clock)
         bulletgrp.update(enemygrp)
-        enemygrp.update(fps)
+        enemygrp.update(fps, clock)
 
     pygame.display.flip()
     clock.tick(60)

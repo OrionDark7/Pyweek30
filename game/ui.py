@@ -4,9 +4,9 @@ from pygame.color import THECOLORS
 pygame.init()
 pygame.font.init()
 
-size = 24
+size = 18
 color = THECOLORS["white"]
-font = pygame.font.Font(None, size)
+font = pygame.font.Font("./font/8-bit-pusab.ttf", size)
 
 def text(txt, position, surface, centered=False):
     render = font.render(str(txt), 1, color)
