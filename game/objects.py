@@ -19,7 +19,6 @@ def GenerateMap():
             NewTile = Tile([x*40, y*40], "regular")
             TileGroup.add(NewTile)
     TowerGroup.add(Tower([40, 360], "base", [0, 9]))
-    listmap[0][9] = 1
     TowerGroup.add(Tower([20, 420], "shooter",  [0, 11]))
     listmap[0][11] = 1
     TowerGroup.add(Tower([20, 300], "shooter", [0, 8]))

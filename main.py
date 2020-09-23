@@ -41,7 +41,7 @@ def switchbuild():
 def Enemy(pos):
     global enemygrp, listmap
     newenemy = entities.Enemy([(pos[0]*40)-20, (pos[1]*40)-20], pos, pos)
-    newenemy.targetqueue = newenemy.pathfinding(listmap, [0, 9])
+    newenemy.targetqueue = newenemy.pathfinding(listmap, [1, 10])
     enemygrp.add(newenemy)
 
 mouse = Mouse()

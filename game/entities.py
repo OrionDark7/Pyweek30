@@ -20,52 +20,69 @@ class Enemy(pygame.sprite.Sprite):
     def pathfinding(self, listmap, goalpos):
         pass
         self.queue = []
-        backtracked = []
         self.visited = {}
-        maxtiles = 700
+        backtraced = []
+        maxtiles = 2400
         iterations = 0
+        found = False
         self.queue.append([self.gpos, None])
+        print(listmap)
         while len(self.queue) > 0:
+            print("START LOOP " + str(iterations))
             inbounds = True
-            try:
-                pos = self.queue[0][0]
-            except:
-                inbounds = False
+            pos = self.queue[0][0]
             lastpos = self.queue[0][1]
-            if inbounds:
-                if self.checktile(listmap, pos, lastpos, goalpos):
-                    break
+            if self.checktile(listmap, pos, lastpos, goalpos):
+                found = True
+                break
             self.queue.pop(0)
             iterations += 1
-            print(self.visited)
+            print("END LOOP")
             if iterations >= maxtiles:
                 backtraced = []
-        if iterations >= maxtiles:
+                break
+        if found:
             backtraced = []
             pos = goalpos
+            print("IN")
             while str(pos) in self.visited and self.visited[str(pos)] != None:
                 if pos != None:
-                    backtraced.append([pos])
+                    backtraced.append(pos)
                 pos = self.visited[str(pos)]
             backtraced.reverse()
+            print(backtraced)
         return backtraced
     def checktile(self, listmap, pos, lastpos, goalpos):
+        returnval = False
+        outrange = False
+        print(pos, goalpos)
         try:
             fakevar = bool(listmap[pos[0]][pos[1]] == 1)
         except:
-            return False
-        if listmap[pos[0]][pos[1]] == 1:
-            return False
-        if str(pos) in self.visited:
-            return False
-        self.visited[str(pos)] = lastpos
+            outrange = True
+        if not outrange:
+            if listmap[pos[0]][pos[1]] == 1:
+                returnval = False
+        else:
+            returnval = False
+            print(str(pos) + "< CHECK")
+        if str(pos) in self.visited.keys():
+            returnval = False
+            return returnval
+        else:
+            self.visited[str(pos)] = lastpos
         if pos == goalpos:
-            return True
-        self.queue.append([[pos[0], pos[1]+1], pos])
-        self.queue.append([[pos[0]+1, pos[1]], pos])
-        self.queue.append([[pos[0], pos[1]-1], pos])
-        self.queue.append([[pos[0]-1, pos[1]], pos])
-        return False
+            returnval = True
+        if not returnval:
+            if not pos[0] < 0 and not pos[1]+1 < 0 and not pos[0]>31 and not pos[1]+1>15:
+                self.queue.append([[pos[0], pos[1]+1], pos])
+            if not pos[0]+1 < 0 and not pos[1] < 0 and not pos[0]+1>31 and not pos[1]>15:
+                self.queue.append([[pos[0]+1, pos[1]], pos])
+            if not pos[0] < 0 and not pos[1] - 1 < 0 and not pos[0]>31 and not pos[1]-1>15:
+                self.queue.append([[pos[0], pos[1]-1], pos])
+            if not pos[0]-1 < 0 and not pos[1] < 0 and not pos[0]-1>31 and not pos[1]>15:
+                self.queue.append([[pos[0]-1, pos[1]], pos])
+        return returnval
     def update(self, fps):
         try:
             self.velocity = Vector2(self.target[0] - self.rect.centerx, self.target[1] - self.rect.centery).normalize() * fps * 0.05
