@@ -1,4 +1,4 @@
-import pygame, math
+import pygame, math, random
 from pygame.math import Vector2
 
 enemies = {"enemy":[500, 50, 0.05, False]}
@@ -7,7 +7,7 @@ enemies = {"enemy":[500, 50, 0.05, False]}
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, position, target, gamepos, type="enemy"):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load("./assets/graphics/enemy.png")
+        self.image = pygame.image.load("./assets/graphics/"+str(type)+".png")
         self.originalimage = self.image
         self.rect = self.image.get_rect()
         self.rect.centerx, self.rect.centery = position
@@ -18,19 +18,13 @@ class Enemy(pygame.sprite.Sprite):
         self.rotation = 0
         self.visited = {}
         self.gpos = gamepos
-        self.health = 50
         self.queue = []
-        self.cooldown = 0
-        self.attributes = enemies["enemy"]
+        self.fxcooldown = 0
+        self.attributes = enemies[type]
         self.speed = self.attributes[2]
+        self.health = self.attributes[1]
         self.effect = None
-    def pathfinding(self, listmap, goalpos, clock):
-        if self.cooldown > 0:
-            self.cooldown -= clock.get_time()
-        if self.cooldown <= 0:
-            if self.effect == "slowness":
-                self.speed = self.attributes[2]
-            self.effect = None
+    def pathfinding(self, listmap, goalpos):
         self.queue = []
         self.visited = {}
         backtraced = []
@@ -39,7 +33,7 @@ class Enemy(pygame.sprite.Sprite):
         found = False
         self.queue.append([self.gpos, None])
         while len(self.queue) > 0:
-            print("START LOOP " + str(iterations))
+            #print("START LOOP " + str(iterations))
             inbounds = True
             pos = self.queue[0][0]
             lastpos = self.queue[0][1]
@@ -48,20 +42,19 @@ class Enemy(pygame.sprite.Sprite):
                 break
             self.queue.pop(0)
             iterations += 1
-            print("END LOOP")
+            #print("END LOOP")
             if iterations >= maxtiles:
                 backtraced = []
                 break
         if found:
             backtraced = []
             pos = goalpos
-            print("IN")
+            #print("IN")
             while str(pos) in self.visited and self.visited[str(pos)] != None:
                 if pos != None:
                     backtraced.append(pos)
                 pos = self.visited[str(pos)]
             backtraced.reverse()
-            print(backtraced)
         return backtraced
     def checktile(self, listmap, pos, lastpos, goalpos):
         returnval = False
@@ -71,21 +64,21 @@ class Enemy(pygame.sprite.Sprite):
         except:
             outrange = True
         if not outrange:
-            if listmap[pos[0]][pos[1]] == 1:
+            if listmap[pos[0]][pos[1]] != 0:
                 returnval = False
                 self.visited[str(pos)] = lastpos
-                print("LALALALALALA")
+                #print("LALALALALALA")
                 return returnval
         else:
             returnval = False
-            print(str(pos) + "< CHECK")
+            #print(str(pos) + "< CHECK")
         if str(pos) in self.visited.keys():
             returnval = False
             return returnval
         else:
             self.visited[str(pos)] = lastpos
-        print("GOT FAR")
-        print(pos, goalpos)
+        #print("GOT FAR")
+        #print(pos, goalpos)
         if pos == goalpos:
             returnval = True
         if not returnval:
@@ -98,7 +91,13 @@ class Enemy(pygame.sprite.Sprite):
             if not pos[0]-1 < 0 and not pos[1] < 0 and not pos[0]-1>31 and not pos[1]>15:
                 self.queue.append([[pos[0]-1, pos[1]], pos])
         return returnval
-    def update(self, fps):
+    def update(self, fps, clock, data):
+        if self.fxcooldown > 0:
+            self.fxcooldown -= clock.get_time()
+        if self.fxcooldown <= 0:
+            if self.effect == "slowness":
+                self.speed = self.attributes[2]
+            self.effect = None
         try:
             self.velocity = Vector2(self.target[0] - self.rect.centerx, self.target[1] - self.rect.centery).normalize() * fps * self.speed
         except:
@@ -128,3 +127,4 @@ class Enemy(pygame.sprite.Sprite):
                 pass #reroute or stay based on type of enemy
         if self.health <= 0:
             self.kill()
+            data.addmoney = int(math.round(self.attributes[1]/random.randint(9, 11)))

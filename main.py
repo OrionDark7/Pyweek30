@@ -33,6 +33,10 @@ class Highlight(pygame.sprite.Sprite):
         if pygame.sprite.spritecollide(mouse, tilegrp, False):
             self.rect.center = pygame.sprite.spritecollide(mouse, tilegrp, False)[0].rect.center
 
+class Data():
+    def __init__(self):
+        self.addmoney = 0
+
 def switchbuild():
     global building, buildimg, buildrect, buildindex
     building = builds[buildindex]
@@ -70,14 +74,16 @@ running = True
 screen = "game"
 fps = 60 #hopefully
 
-cash = 1000
+cash = 10000
 wave = 1
 wavestarted = False
 building = None
 buildimg = None
 buildingcosts = {"shooter" : 100, "wall" : 25, "healer" : 250, "fxf_slowness" : 600}
 buildindex = 0
-builds = ["shooter", "wall"]
+builds = ["shooter", "wall", "healer", "fxf_slowness"]
+
+data = Data()
 
 bulletgrp = pygame.sprite.Group()
 enemygrp = pygame.sprite.Group()
@@ -95,7 +101,6 @@ while running:
             mouse.update()
             highlight.update(tilemap)
         if event.type == pygame.MOUSEBUTTONDOWN:
-            print(event.button)
             if event.button == 1: #LEFT BUTTON
                 if building != None:
                     if cash >= buildingcosts[building]:
@@ -108,13 +113,13 @@ while running:
                             listmap[newgpos[0]][newgpos[1]] = 1
                     else:
                         pass #trigger message - not enough money!
-            elif event.button == 3 and building != None:
+            elif event.button == 4 and building != None:
                 if buildindex == len(builds)-1:
                     buildindex = 0
                 else:
                     buildindex += 1
                 switchbuild()
-            elif event.button == 4 and building != None:
+            elif event.button == 5 and building != None:
                 if buildindex == 0:
                     buildindex = len(builds)-1
                 else:
@@ -148,7 +153,7 @@ while running:
             if event.key == pygame.K_l:
                 drawlistmap()
         if event.type == pygame.USEREVENT:
-            Enemy([31, 9])
+            Enemy([32, 9])
     if screen == "game":
         window.fill([255, 255, 255])
 
@@ -162,12 +167,16 @@ while running:
         else:
             highlight.draw()
 
+        if data.addmoney > 0:
+            cash += 1
+            data.addmoney -= 1
+
         ui.text("cash - " + str(cash), [5, 0], window)
-        ui.text("wave " + str(wave), [5, 22], window)
+        ui.text("wave " + str(wave), [5, 25], window)
 
         towergrp.update(bulletgrp, enemygrp, towergrp, clock)
         bulletgrp.update(enemygrp)
-        enemygrp.update(fps, clock)
+        enemygrp.update(fps, clock, data)
 
     pygame.display.flip()
     clock.tick(60)
