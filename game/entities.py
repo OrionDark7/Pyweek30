@@ -66,10 +66,15 @@ class Enemy(pygame.sprite.Sprite):
             outrange = True
         if not outrange:
             if listmap[pos[0]][pos[1]] != 0:
-                returnval = False
-                self.visited[str(pos)] = lastpos
-                #print("LALALALALALA")
-                return returnval
+                if listmap[pos[0]][pos[1]] == 2:
+                    print("in")
+                    returnval = True
+                    goalpos = pos
+                else:
+                    returnval = False
+                    self.visited[str(pos)] = lastpos
+                    #print("LALALALALALA")
+                    return returnval
         else:
             returnval = False
             #print(str(pos) + "< CHECK")

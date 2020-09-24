@@ -5,6 +5,7 @@ from game import objects, entities, ui
 
 pygame.init()
 window = pygame.display.set_mode([1280, 720])
+pygame.display.set_caption("Lost In Cyberspace")
 clock = pygame.time.Clock()
 
 p = {"a" : "./assets/", "g" : "./assets/graphics/"}
@@ -36,6 +37,7 @@ class Highlight(pygame.sprite.Sprite):
 class Data():
     def __init__(self):
         self.addmoney = 0
+        self.metadata = {}
 
 def switchbuild():
     global building, buildimg, buildrect, buildindex
@@ -44,9 +46,9 @@ def switchbuild():
     buildrect = buildimg.get_rect()
     buildrect = [-(buildrect.width / 2), -(buildrect.height / 2)]
 
-def Enemy(pos):
+def Enemy(pos, type="enemy"):
     global enemygrp, listmap
-    newenemy = entities.Enemy([(pos[0]*40)-20, (pos[1]*40)-20], pos, pos)
+    newenemy = entities.Enemy([(pos[0]*40)-20, (pos[1]*40)-20], pos, pos, type)
     newenemy.targetqueue = newenemy.pathfinding(listmap, [1, 9])
     enemygrp.add(newenemy)
 
@@ -72,11 +74,15 @@ highlight = Highlight()
 
 running = True
 screen = "game"
+fullscreen = False
 fps = 60 #hopefully
 
 cash = 10000
-wave = 1
+wave = 0
+wavespawned = {}
+wavespawns = [[["enemy",5]], [["enemy",10]]]
 wavestarted = False
+keepspawning = False
 building = None
 buildimg = None
 buildingcosts = {"shooter" : 100, "wall" : 25, "healer" : 250, "fxf_slowness" : 600}
@@ -84,6 +90,11 @@ buildindex = 0
 builds = ["shooter", "wall", "healer", "fxf_slowness"]
 
 data = Data()
+data.metadata["basepos"] = [1, 9]
+
+gamebuttons = pygame.sprite.Group()
+testbutton = ui.button("test", [20, 660], [200, 200, 200], [255, 255, 255])
+gamebuttons.add(testbutton)
 
 bulletgrp = pygame.sprite.Group()
 enemygrp = pygame.sprite.Group()
@@ -101,6 +112,8 @@ while running:
         if event.type == pygame.MOUSEMOTION:
             mouse.update()
             highlight.update(tilemap)
+            if screen == "game":
+                gamebuttons.update(mouse)
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1: #LEFT BUTTON
                 if building != None:
@@ -114,6 +127,9 @@ while running:
                             listmap[newgpos[0]][newgpos[1]] = 1
                     else:
                         pass #trigger message - not enough money!
+                else:
+                    if testbutton.click(mouse):
+                        print("yeah")
             elif event.button == 4 and building != None:
                 if buildindex == len(builds)-1:
                     buildindex = 0
@@ -148,13 +164,29 @@ while running:
             if event.key == pygame.K_w and not wavestarted:
                 if CheckAccesible([31, 9]):
                     wavestarted = True
+                    wave += 1
+                    wavespawned = wavespawns[wave-1]
                     pygame.time.set_timer(pygame.USEREVENT, 1000)
                 else:
                     print("Can't reach base!!!")
             if event.key == pygame.K_l:
                 drawlistmap()
-        if event.type == pygame.USEREVENT:
-            Enemy([32, 9])
+            if event.key == pygame.K_F11:
+                fullscreen = not fullscreen
+                if fullscreen:
+                    window = pygame.display.set_mode([1280, 720], pygame.FULLSCREEN)
+                else:
+                    window = pygame.display.set_mode([1280, 720])
+        if event.type == pygame.USEREVENT and wavestarted and keepspawning:
+            Enemy([32, 9], wavespawned[0][0])
+            wavespawned[0][1] -= 1
+            print(wavespawned[0][1])
+            if wavespawned[0][1] <= 0:
+                wavespawned.pop(0)
+            if len(wavespawned) == 0:
+                keepspawning = False
+            if wave+1 == len(wavespawns):
+                screen = "levelcomplete"
     if screen == "game":
         window.fill([255, 255, 255])
 
@@ -163,6 +195,7 @@ while running:
         bulletgrp.draw(window)
         towergrp.draw(window)
         enemygrp.draw(window)
+        gamebuttons.draw(window)
 
         if building != None:
             window.blit(buildimg, [highlight.rect.centerx + buildrect[0], highlight.rect.centery + buildrect[1]])
@@ -174,12 +207,20 @@ while running:
             data.addmoney -= 1
 
         ui.text("cash - " + str(cash), [5, 0], window)
-        ui.text("wave " + str(wave), [5, 25], window)
+        if not wavestarted:
+            ui.text("start wave " + str(wave+1), [5, 25], window)
+        else:
+            ui.text("wave " + str(wave), [5, 25], window)
+        if len(enemygrp) == 0:
+            wavestarted = False
 
         towergrp.update(bulletgrp, enemygrp, towergrp, clock)
         bulletgrp.update(enemygrp, data)
         enemygrp.update(fps, clock, data)
         fieldgrp.update()
+    if screen == "levelcomplete":
+        window.fill([0, 0, 0])
+        ui.text("level complete!", [640, 180], window, centered=True)
 
     pygame.display.flip()
     clock.tick(60)
