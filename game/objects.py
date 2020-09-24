@@ -100,6 +100,7 @@ class Tower(pygame.sprite.Sprite):
         self.health = self.attributes[2]
         self.maxhealth = self.health
         self.attachedfield = None
+        self.rotated = 0
         if self.type.startswith("shooter") or self.type.startswith("fxf"):
             self.rangesurface = pygame.surface.Surface([self.attributes[1], self.attributes[1]])
             self.rangesurface = self.rangesurface.get_rect()
@@ -177,6 +178,11 @@ class Tower(pygame.sprite.Sprite):
                     self.rotation = self.originalrotation+180
                 if (self.target.rect.centerx > self.rect.centerx and self.target.rect.centery > self.rect.centery):
                     self.rotation = -self.originalrotation
+                if self.rotated != self.rotation:
+                    if self.rotated < self.rotation:
+                        self.rotated += 1
+                    if self.rotated > self.rotation:
+                        self.rotated -= 1
                 self.image = pygame.transform.rotate(self.originalimage, round(self.rotation))
                 oldc = self.rect.center
                 self.rect = self.image.get_rect()

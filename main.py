@@ -77,7 +77,7 @@ screen = "game"
 fullscreen = False
 fps = 60 #hopefully
 
-cash = 10000
+cash = 500
 wave = 0
 wavespawned = {}
 wavespawns = [[["enemy",5]], [["enemy",10]]]
@@ -93,8 +93,17 @@ data = Data()
 data.metadata["basepos"] = [1, 9]
 
 gamebuttons = pygame.sprite.Group()
-testbutton = ui.button("test", [20, 660], [200, 200, 200], [255, 255, 255])
-gamebuttons.add(testbutton)
+testbutton = ui.button("100 gecs", [20, 660], [200, 200, 200], [255, 255, 255]) #100 GECS BUTTON
+ui.fontsize(16)
+wavebutton = ui.button("start wave", [640, 690], [200, 200, 200], [255, 255, 255], True)
+ui.fontsize(8)
+hidebutton = ui.button("hide menu (h)", [640, 600], [200, 200, 200], [255, 255, 255], True)
+gamebuttons.add(wavebutton)
+gamebuttons.add(hidebutton)
+
+gamemenubackdrop = pygame.surface.Surface([480, 120])
+gamemenubackdrop.fill([0, 0, 0, 128])
+gamemenubackdrop.set_alpha(128)
 
 bulletgrp = pygame.sprite.Group()
 enemygrp = pygame.sprite.Group()
@@ -128,8 +137,18 @@ while running:
                     else:
                         pass #trigger message - not enough money!
                 else:
-                    if testbutton.click(mouse):
-                        print("yeah")
+                    if wavebutton.click(mouse):
+                        if CheckAccesible([31, 9]):
+                            wavestarted = True
+                            keepspawning = True
+                            wave += 1
+                            try:
+                                wavespawned = wavespawns[wave - 1]
+                            except:
+                                screen = "levelcomplete"
+                            pygame.time.set_timer(pygame.USEREVENT, 1000)
+                        else:
+                            print("Can't reach base!!!")
             elif event.button == 4 and building != None:
                 if buildindex == len(builds)-1:
                     buildindex = 0
@@ -165,7 +184,10 @@ while running:
                 if CheckAccesible([31, 9]):
                     wavestarted = True
                     wave += 1
-                    wavespawned = wavespawns[wave-1]
+                    try:
+                        wavespawned = wavespawns[wave-1]
+                    except:
+                        screen = "levelcomplete"
                     pygame.time.set_timer(pygame.USEREVENT, 1000)
                 else:
                     print("Can't reach base!!!")
@@ -195,6 +217,7 @@ while running:
         bulletgrp.draw(window)
         towergrp.draw(window)
         enemygrp.draw(window)
+        window.blit(gamemenubackdrop, [400, 600])
         gamebuttons.draw(window)
 
         if building != None:
@@ -206,13 +229,15 @@ while running:
             cash += 1
             data.addmoney -= 1
 
-        ui.text("cash - " + str(cash), [5, 0], window)
+        ui.fontsize(10)
+        ui.text(str(cash) + " bitcoin", [480, 605], window, centered=True)
         if not wavestarted:
-            ui.text("start wave " + str(wave+1), [5, 25], window)
+            ui.text("start wave " + str(wave+1), [800, 605], window, centered=True)
         else:
-            ui.text("wave " + str(wave), [5, 25], window)
-        if len(enemygrp) == 0:
+            ui.text("wave " + str(wave), [800, 605], window, centered=True) #the x coordinate is a coincidence I swear
+        if len(enemygrp) == 0 and not keepspawning:
             wavestarted = False
+        ui.fontsize(18)
 
         towergrp.update(bulletgrp, enemygrp, towergrp, clock)
         bulletgrp.update(enemygrp, data)
@@ -220,6 +245,7 @@ while running:
         fieldgrp.update()
     if screen == "levelcomplete":
         window.fill([0, 0, 0])
+        ui.fontsize(24)
         ui.text("level complete!", [640, 180], window, centered=True)
 
     pygame.display.flip()

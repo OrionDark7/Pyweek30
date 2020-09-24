@@ -38,27 +38,37 @@ class button(pygame.sprite.Sprite):
         self.image = self.backborder
         self.rect = self.image.get_rect()
         self.image.blit(self.nimage, [(self.rect.width-self.originalrect.width)/2, (self.rect.height-self.originalrect.height)/2])
+        self.image1 = pygame.surface.Surface([self.rect.width, self.rect.height])
+        self.image1.fill([0, 0, 0, 0])
+        self.image1.blit(self.backborder, [0, 0])
+        self.image1.blit(self.himage, [(self.rect.width - self.originalrect.width) / 2,
+                                      (self.rect.height - self.originalrect.height) / 2])
+        self.image2 = pygame.surface.Surface([self.rect.width, self.rect.height])
+        self.image2.fill([0, 0, 0, 0])
+        self.image2.blit(self.backborder, [0, 0])
+        self.image2.blit(self.nimage, [(self.rect.width - self.originalrect.width) / 2,
+                                       (self.rect.height - self.originalrect.height) / 2])
         if centered:
             self.rect.center = position
         else:
             self.rect.topleft = position
         self.clicked = False
         self.hovered = False
+        self.position = position
     def click(self, mouse):
         self.clicked = False
         if self.rect.collidepoint(mouse.rect.topleft):
             self.clicked = True
+        return self.clicked
     def update(self, mouse):
         self.hovered = False
+        self.rect = self.image.get_rect()
+        self.rect.center = self.position
         if self.rect.collidepoint(mouse.rect.topleft):
             self.hovered = True
         if self.hovered:
-            self.image.fill([0, 0, 255])
-            self.image.set_colorkey([0, 255, 255])
-            self.image.blit(self.backborder, [0,0])
-            self.image.blit(self.himage, [(self.rect.width - self.originalrect.width)/2, (self.rect.height - self.originalrect.height)/2])
+            self.image = self.image1
+            self.image.set_alpha(128)
         else:
-            self.image.fill([0, 0, 255])
-            self.image.set_colorkey([0, 255, 255])
-            self.image.blit(self.backborder, [0, 0])
-            self.image.blit(self.himage, [(self.rect.width - self.originalrect.width)/2, (self.rect.height - self.originalrect.height)/2])
+            self.image = self.image2
+            self.image.set_alpha(128)
