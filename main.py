@@ -47,13 +47,13 @@ def switchbuild():
 def Enemy(pos):
     global enemygrp, listmap
     newenemy = entities.Enemy([(pos[0]*40)-20, (pos[1]*40)-20], pos, pos)
-    newenemy.targetqueue = newenemy.pathfinding(listmap, [1, 10])
+    newenemy.targetqueue = newenemy.pathfinding(listmap, [1, 9])
     enemygrp.add(newenemy)
 
 def CheckAccesible(pos):
     global enemygrp, listmap
     newenemy = entities.Enemy([(pos[0]*40)-20, (pos[1]*40)-20], pos, pos)
-    newenemy.targetqueue = newenemy.pathfinding(listmap, [1, 10])
+    newenemy.targetqueue = newenemy.pathfinding(listmap, [1, 9])
     if newenemy.targetqueue == []:
         return False
     else:
@@ -87,6 +87,7 @@ data = Data()
 
 bulletgrp = pygame.sprite.Group()
 enemygrp = pygame.sprite.Group()
+fieldgrp = pygame.sprite.Group()
 
 tilemap = pygame.sprite.Group()
 towergrp = pygame.sprite.Group()
@@ -105,7 +106,7 @@ while running:
                 if building != None:
                     if cash >= buildingcosts[building]:
                         newgpos = GamePos(highlight.rect.center)
-                        towergrp.add(objects.Tower(highlight.rect.center, building, newgpos))
+                        towergrp.add(objects.Tower(highlight.rect.center, building, newgpos, fieldgrp))
                         cash -= buildingcosts[building]
                         if building.startswith("wall"):
                             listmap[newgpos[0]][newgpos[1]] = 2
@@ -158,6 +159,7 @@ while running:
         window.fill([255, 255, 255])
 
         tilemap.draw(window)
+        fieldgrp.draw(window)
         bulletgrp.draw(window)
         towergrp.draw(window)
         enemygrp.draw(window)
@@ -175,8 +177,9 @@ while running:
         ui.text("wave " + str(wave), [5, 25], window)
 
         towergrp.update(bulletgrp, enemygrp, towergrp, clock)
-        bulletgrp.update(enemygrp)
+        bulletgrp.update(enemygrp, data)
         enemygrp.update(fps, clock, data)
+        fieldgrp.update()
 
     pygame.display.flip()
     clock.tick(60)

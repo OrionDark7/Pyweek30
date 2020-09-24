@@ -24,6 +24,7 @@ class Enemy(pygame.sprite.Sprite):
         self.speed = self.attributes[2]
         self.health = self.attributes[1]
         self.effect = None
+        self.mask = pygame.mask.from_surface(self.image)
     def pathfinding(self, listmap, goalpos):
         self.queue = []
         self.visited = {}
@@ -127,4 +128,4 @@ class Enemy(pygame.sprite.Sprite):
                 pass #reroute or stay based on type of enemy
         if self.health <= 0:
             self.kill()
-            data.addmoney = int(math.round(self.attributes[1]/random.randint(9, 11)))
+            data.addmoney = int(round(self.attributes[1]/random.randint(9, 11)))

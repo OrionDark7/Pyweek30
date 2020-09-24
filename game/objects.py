@@ -1,7 +1,7 @@
-import pygame, math
+import pygame, math, random
 from pygame.math import Vector2
 
-towers = {"shooter" : [500, 600, 50], "base" : [0, 0, 250], "wall" : [0, 0, 100], "healer" : [5000, 190, 50], "fxf_slowness" : [7000, 280, 100]}
+towers = {"shooter" : [500, 600, 50], "base" : [0, 0, 250], "wall" : [0, 0, 100], "healer" : [5000, 190, 50], "fxf_slowness" : [4000, 280, 100]}
 bullets = {"shooter" : [10]}
 #name - speed (ms/action), range (pixels), hp
 #name - damage
@@ -10,6 +10,7 @@ def GenerateMap():
     #just blank for now, maybe add presets later? 9.19.2020
     TileGroup = pygame.sprite.Group()
     TowerGroup = pygame.sprite.Group()
+    FieldGroup = pygame.sprite.Group()
     listmap = []
     metadata = {}
 
@@ -19,11 +20,11 @@ def GenerateMap():
             listmap[x].append(0)
             NewTile = Tile([x*40, y*40], "regular")
             TileGroup.add(NewTile)
-    TowerGroup.add(Tower([40, 360], "base", [0, 9]))
+    TowerGroup.add(Tower([40, 360], "base", [0, 9], FieldGroup))
     metadata["base"] = [0, 9]
-    TowerGroup.add(Tower([20, 420], "shooter",  [0, 11]))
+    TowerGroup.add(Tower([20, 420], "shooter",  [0, 11], FieldGroup))
     listmap[0][11] = 1
-    TowerGroup.add(Tower([20, 300], "shooter", [0, 8]))
+    TowerGroup.add(Tower([20, 300], "shooter", [0, 8], FieldGroup))
     listmap[0][8] = 1
     return TileGroup, TowerGroup, listmap, metadata
 
@@ -39,8 +40,51 @@ class Tile(pygame.sprite.Sprite):
     def update(self):
         pass
 
+class EffectField(pygame.sprite.Sprite):
+    def __init__(self, type, position):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.image.load("./assets/graphics/fields/"+type+".png")
+        self.originalimage = self.image
+        self.attributes = towers[type]
+        self.originalimage = pygame.transform.scale(self.originalimage, [280, 280])
+        self.originalimage.set_alpha(128)
+        self.rotation = 0
+        self.mask = pygame.mask.from_surface(self.originalimage)
+        self.rect = self.image.get_rect()
+        self.diameter = self.rect.width
+        self.rect.center = position
+        self.type = str(type)
+        self.scale = -2
+        self.goingup = True
+    def update(self):
+        if self.rotation == 360:
+            self.rotation = 0
+        else:
+            self.rotation += 1
+        if self.goingup and self.scale < 2:
+            self.scale += 2
+        elif self.goingup and self.scale == 2:
+            self.goingup = False
+        elif not self.goingup and self.scale > -2:
+            self.scale -= 2
+        elif not self.goingup and self.scale == 2:
+            self.goingup = True
+        self.image = pygame.transform.scale(self.originalimage, (self.diameter + self.scale, self.diameter + self.scale))
+        self.image = pygame.transform.rotate(self.image, self.rotation)
+        self.attributes = towers[self.type]
+        oldc = self.rect.center
+        self.rect = self.image.get_rect()
+        self.rect.center = oldc
+    def check(self, sprites):
+        for s in sprites:
+            s.mask = pygame.mask.from_surface(s.image)
+            if pygame.sprite.collide_mask(self, s):
+                if self.type == "fxf_slowness":
+                    s.speed = s.attributes[2] * 0.5
+                    s.fxcooldown = self.attributes[0]
+
 class Tower(pygame.sprite.Sprite):
-    def __init__(self, position, type, gamepos):
+    def __init__(self, position, type, gamepos, fieldgrp):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.image.load("./assets/graphics/"+type+".png")
         self.originalimage = self.image
@@ -55,9 +99,13 @@ class Tower(pygame.sprite.Sprite):
         self.rangesurface = self.rect
         self.health = self.attributes[2]
         self.maxhealth = self.health
+        self.attachedfield = None
         if self.type.startswith("shooter") or self.type.startswith("fxf"):
             self.rangesurface = pygame.surface.Surface([self.attributes[1], self.attributes[1]])
             self.rangesurface = self.rangesurface.get_rect()
+        if self.type.startswith("fxf"):
+            self.attachedfield = EffectField(self.type, self.rect.center)
+            fieldgrp.add(self.attachedfield)
     def heal(self, rate):
         self.health+=rate
         if self.health > self.maxhealth:
@@ -87,15 +135,13 @@ class Tower(pygame.sprite.Sprite):
                 self.rect = oldrect
             self.cooldown = self.attributes[0]
         if self.type.startswith("fxf"):
+            self.attachedfield.rect.center = self.rect.center
             oldrect = self.rect
             self.rect = self.rangesurface
             self.rect.center = oldrect.center
             if pygame.sprite.spritecollide(self, enemygrp, False):
                 sprites = pygame.sprite.spritecollide(self, enemygrp, False)
-                for s in sprites:
-                    if self.type == "fxf_slowness":
-                        s.speed = s.attributes[2] * 0.5
-                        s.fxcooldown = self.attributes[0]
+                self.attachedfield.check(sprites)
             self.rect = oldrect
         elif self.type.startswith("shooter"):
             if self.target == None:
@@ -107,7 +153,6 @@ class Tower(pygame.sprite.Sprite):
                     if len(sprites) > 1:
                         spritedistances = []
                         for sprite in sprites:
-                            print(abs((sprite.rect.centerx - self.rect.centerx)^2 + (sprite.rect.centery - self.rect.centery)^2))
                             distance = math.sqrt(abs((sprite.rect.centerx - self.rect.centerx)^2 + (sprite.rect.centery - self.rect.centery)^2))
                             spritedistances.append(distance)
                         shortest = min(spritedistances)
@@ -150,14 +195,18 @@ class Bullet(pygame.sprite.Sprite):
         self.parent = parent
         self.attributes = bullets[self.parent.type]
         self.velocity = velocity
-    def update(self, enemygrp):
+        self.mask = pygame.mask.from_surface(self.image)
+    def update(self, enemygrp, data):
         self.position += self.velocity
         self.rect.center = self.position.x, self.position.y
         if (self.rect.right < 0 or self.rect.left > 1280 or self.rect.top > 720 or self.rect.bottom < 0):
             self.kill()
         if pygame.sprite.spritecollide(self, enemygrp, False):
             sprite = pygame.sprite.spritecollide(self, enemygrp, False)[0]
-            sprite.health -= self.attributes[0]
-            if sprite.health <= 0:
-                sprite.kill()
-            self.kill()
+            sprite.mask = pygame.mask.from_surface(sprite.image)
+            if pygame.sprite.collide_mask(self, sprite):
+                sprite.health -= self.attributes[0]
+                if sprite.health <= 0:
+                    sprite.kill()
+                    data.addmoney = int(round(sprite.attributes[1] / random.randint(9, 11)))
+                self.kill()
