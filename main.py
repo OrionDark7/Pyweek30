@@ -5,10 +5,10 @@ from game import objects, entities, ui
 
 pygame.init()
 window = pygame.display.set_mode([1280, 720])
-pygame.display.set_caption("Lost In Cyberspace")
+pygame.display.set_caption("Lost in Cyberspace")
 clock = pygame.time.Clock()
 
-p = {"a" : "./assets/", "g" : "./assets/graphics/"}
+p = {"a" : "./assets/", "g" : "./assets/graphics/", "t" : "./assets/graphics/towers/"}
 
 class Mouse(pygame.sprite.Sprite):
     def __init__(self):
@@ -42,7 +42,7 @@ class Data():
 def switchbuild():
     global building, buildimg, buildrect, buildindex
     building = builds[buildindex]
-    buildimg = pygame.image.load(p["g"] + building + ".png")
+    buildimg = pygame.image.load(p["t"] + building + ".png")
     buildrect = buildimg.get_rect()
     buildrect = [-(buildrect.width / 2), -(buildrect.height / 2)]
 
@@ -69,6 +69,13 @@ def drawlistmap():
     for line in listmap:
         print(line)
 
+def effect(position, text, speed, cooldown, color=[255, 255, 255]):
+    global effectgrp
+    prevsize = ui.size
+    ui.fontsize(8)
+    effectgrp.add(ui.effect(position, text, speed, cooldown, color))
+    ui.fontsize(prevsize)
+
 mouse = Mouse()
 highlight = Highlight()
 
@@ -78,6 +85,7 @@ fullscreen = False
 fps = 60 #hopefully
 
 cash = 500
+projectedcash = 500
 wave = 0
 wavespawned = {}
 wavespawns = [[["enemy",5]], [["enemy",10]]]
@@ -85,29 +93,42 @@ wavestarted = False
 keepspawning = False
 building = None
 buildimg = None
-buildingcosts = {"shooter" : 100, "wall" : 25, "healer" : 250, "fxf_slowness" : 600}
+buildingcosts = {"shooter" : 100, "wall" : 25, "healer" : 250, "fxf_slowness" : 500}
 buildindex = 0
 builds = ["shooter", "wall", "healer", "fxf_slowness"]
+descriptions = {"shooter" : ["shoots 2 bullets a second, each bullet does", "10hp of damage."],
+                "wall" : ["i don't know, it exists? it protects stuff sometimes?", "it has 100 hitpoints, so that's pretty cool i guess."],
+                "healer" : ["this tower heals towers within a 2 tile radius.", "it heals 2hp every 5 seconds."],
+                "fxf_slowness" : ["all enemies that come within the effect field are", "slowed down to half speed for 4 seconds."]}
+ti = {}
+for tower in builds:
+    ti[tower] = pygame.transform.scale2x(pygame.image.load(p["t"]+str(tower)+".png"))
 
 data = Data()
 data.metadata["basepos"] = [1, 9]
 
 gamebuttons = pygame.sprite.Group()
-testbutton = ui.button("100 gecs", [20, 660], [200, 200, 200], [255, 255, 255]) #100 GECS BUTTON
+testbutton = ui.button("100 gecs", [20, 660], [255, 255, 255], [255, 255, 255]) #100 GECS BUTTON
 ui.fontsize(16)
-wavebutton = ui.button("start wave", [640, 690], [200, 200, 200], [255, 255, 255], True)
+buildbutton = ui.button("build", [480, 670], [255, 255, 255], [255, 255, 255], True)
+wavebutton = ui.button("start wave", [640, 670], [255, 255, 255], [255, 255, 255], True)
+pausebutton = ui.button("pause", [800, 670], [255, 255, 255], [255, 255, 255], True)
 ui.fontsize(8)
-hidebutton = ui.button("hide menu (h)", [640, 600], [200, 200, 200], [255, 255, 255], True)
+hidebutton = ui.button("hide menu (m)", [640, 600], [255, 255, 255], [255, 255, 255], True)
+gamebuttons.add(buildbutton)
 gamebuttons.add(wavebutton)
+gamebuttons.add(pausebutton)
 gamebuttons.add(hidebutton)
 
 gamemenubackdrop = pygame.surface.Surface([480, 120])
 gamemenubackdrop.fill([0, 0, 0, 128])
 gamemenubackdrop.set_alpha(128)
+showmenu = True
 
 bulletgrp = pygame.sprite.Group()
 enemygrp = pygame.sprite.Group()
 fieldgrp = pygame.sprite.Group()
+effectgrp = pygame.sprite.Group()
 
 tilemap = pygame.sprite.Group()
 towergrp = pygame.sprite.Group()
@@ -123,21 +144,26 @@ while running:
             highlight.update(tilemap)
             if screen == "game":
                 gamebuttons.update(mouse)
+                hidebutton.update(mouse)
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1: #LEFT BUTTON
                 if building != None:
-                    if cash >= buildingcosts[building]:
+                    if projectedcash >= buildingcosts[building]:
                         newgpos = GamePos(highlight.rect.center)
                         towergrp.add(objects.Tower(highlight.rect.center, building, newgpos, fieldgrp))
-                        cash -= buildingcosts[building]
+                        data.addmoney -= buildingcosts[building]
+                        projectedcash -= buildingcosts[building]
                         if building.startswith("wall"):
                             listmap[newgpos[0]][newgpos[1]] = 2
                         else:
                             listmap[newgpos[0]][newgpos[1]] = 1
+
                     else:
-                        pass #trigger message - not enough money!
+                        effect([640, 580], "not enough money!", -0.05, 750, color=[255, 0, 0])
                 else:
-                    if wavebutton.click(mouse):
+                    if pausebutton.click(mouse) and showmenu:
+                        screen = "paused"
+                    elif wavebutton.click(mouse) and not wavestarted and showmenu and building == None:
                         if CheckAccesible([31, 9]):
                             wavestarted = True
                             keepspawning = True
@@ -149,6 +175,11 @@ while running:
                             pygame.time.set_timer(pygame.USEREVENT, 1000)
                         else:
                             print("Can't reach base!!!")
+                    elif buildbutton.click(mouse) and showmenu and building == None:
+                        buildindex = 0
+                        switchbuild()
+                    elif hidebutton.click(mouse) and showmenu and building == None:
+                        showmenu = False
             elif event.button == 4 and building != None:
                 if buildindex == len(builds)-1:
                     buildindex = 0
@@ -162,6 +193,8 @@ while running:
                     buildindex -= 1
                 switchbuild()
         if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_m:
+                showmenu = not showmenu
             if event.key == pygame.K_b and building == None:
                 buildindex = 0
                 switchbuild()
@@ -183,14 +216,13 @@ while running:
             if event.key == pygame.K_w and not wavestarted:
                 if CheckAccesible([31, 9]):
                     wavestarted = True
+                    keepspawning = True
                     wave += 1
                     try:
-                        wavespawned = wavespawns[wave-1]
+                        wavespawned = wavespawns[wave - 1]
                     except:
                         screen = "levelcomplete"
                     pygame.time.set_timer(pygame.USEREVENT, 1000)
-                else:
-                    print("Can't reach base!!!")
             if event.key == pygame.K_l:
                 drawlistmap()
             if event.key == pygame.K_F11:
@@ -199,54 +231,104 @@ while running:
                     window = pygame.display.set_mode([1280, 720], pygame.FULLSCREEN)
                 else:
                     window = pygame.display.set_mode([1280, 720])
-        if event.type == pygame.USEREVENT and wavestarted and keepspawning:
-            Enemy([32, 9], wavespawned[0][0])
+        if event.type == pygame.USEREVENT and wavestarted and keepspawning and screen == "game":
+            try:
+                Enemy([32, 9], wavespawned[0][0])
+            except:
+                screen = "levelcomplete"
             wavespawned[0][1] -= 1
-            print(wavespawned[0][1])
             if wavespawned[0][1] <= 0:
                 wavespawned.pop(0)
             if len(wavespawned) == 0:
                 keepspawning = False
-            if wave+1 == len(wavespawns):
+            if wave+1 == len(wavespawns)+1 and len(enemygrp) == 0:
                 screen = "levelcomplete"
     if screen == "game":
         window.fill([255, 255, 255])
 
         tilemap.draw(window)
-        fieldgrp.draw(window)
-        bulletgrp.draw(window)
         towergrp.draw(window)
+        bulletgrp.draw(window)
         enemygrp.draw(window)
-        window.blit(gamemenubackdrop, [400, 600])
-        gamebuttons.draw(window)
+        fieldgrp.draw(window)
+        effectgrp.draw(window)
 
         if building != None:
             window.blit(buildimg, [highlight.rect.centerx + buildrect[0], highlight.rect.centery + buildrect[1]])
         else:
             highlight.draw()
-
+        if showmenu:
+            window.blit(gamemenubackdrop, [400, 600])
+            ui.fontsize(10)
+            ui.text(str(cash) + " bitcoin", [480, 600], window, centered=True)
+            if not wavestarted:
+                if building != None:
+                    ui.text("press b to cancel", [800, 600], window,
+                            centered=True)
+                else:
+                    ui.text("start wave " + str(wave + 1), [800, 600], window, centered=True)
+            else:
+                if building != None:
+                    ui.text("press b to cancel", [800, 600], window,
+                            centered=True)
+                else:
+                    ui.text("wave " + str(wave), [800, 600], window,
+                            centered=True)  # the x coordinate is a coincidence I swear
+            if building != None:
+                window.blit(ti[building], [420, 630])
+                ui.fontsize(21)
+                ui.text(building, [510, 620], window)
+                ui.fontsize(10)
+                if cash >= buildingcosts[building]:
+                    ui.color = [0, 255, 0]
+                else:
+                    ui.color = [255, 0, 0]
+                ui.text("costs " + str(buildingcosts[building]) + " bitcoin", [510, 652], window)
+                ui.color = [255, 255, 255]
+                ui.fontsize(8)
+                ui.text(str(descriptions[building][0]), [510, 675], window)
+                ui.text(str(descriptions[building][1]), [510, 695], window)
+            else:
+                gamebuttons.draw(window)
+            if len(enemygrp) == 0 and not keepspawning:
+                wavestarted = False
+            ui.fontsize(18)
         if data.addmoney > 0:
             cash += 1
             data.addmoney -= 1
-
-        ui.fontsize(10)
-        ui.text(str(cash) + " bitcoin", [480, 605], window, centered=True)
-        if not wavestarted:
-            ui.text("start wave " + str(wave+1), [800, 605], window, centered=True)
+        elif data.addmoney < 0:
+            cash -= 1
+            data.addmoney += 1
         else:
-            ui.text("wave " + str(wave), [800, 605], window, centered=True) #the x coordinate is a coincidence I swear
-        if len(enemygrp) == 0 and not keepspawning:
-            wavestarted = False
-        ui.fontsize(18)
+            projectedcash = cash
 
         towergrp.update(bulletgrp, enemygrp, towergrp, clock)
         bulletgrp.update(enemygrp, data)
         enemygrp.update(fps, clock, data)
         fieldgrp.update()
+        effectgrp.update(clock)
+        ui.fontsize(18)
+
     if screen == "levelcomplete":
+        window.fill([255, 255, 255])
+
+        tilemap.draw(window)
+        fieldgrp.draw(window)
+        towergrp.draw(window)
+        bulletgrp.draw(window)
+        enemygrp.draw(window)
+
         window.fill([0, 0, 0])
         ui.fontsize(24)
         ui.text("level complete!", [640, 180], window, centered=True)
+    if screen == "paused":
+        window.fill([255, 255, 255])
+
+        tilemap.draw(window)
+        fieldgrp.draw(window)
+        towergrp.draw(window)
+        bulletgrp.draw(window)
+        enemygrp.draw(window)
 
     pygame.display.flip()
     clock.tick(60)

@@ -15,7 +15,7 @@ class Enemy(pygame.sprite.Sprite):
         self.target = [(target[0]*40)-20, (target[1]*40)-20]
         self.targetqueue = []
         self.velocity = Vector2(target[0] - self.rect.centerx, target[1] - self.rect.centery).normalize()
-        self.rotation = 0
+        self.rotation = 360
         self.visited = {}
         self.gpos = gamepos
         self.queue = []
@@ -25,7 +25,7 @@ class Enemy(pygame.sprite.Sprite):
         self.health = self.attributes[1]
         self.effect = None
         self.mask = pygame.mask.from_surface(self.image)
-        self.rotated = 0
+        self.rotated = 360
     def pathfinding(self, listmap, goalpos):
         self.queue = []
         self.visited = {}
@@ -111,24 +111,19 @@ class Enemy(pygame.sprite.Sprite):
             pass
         self.position += self.velocity
         self.rect.center = round(self.position[0]), round(self.position[1])
-        #print(math.atan(abs(self.target[1] - self.rect.centery)/abs(self.target[0] - self.rect.centerx))*57.2958)
-        try:
-            self.rotation = math.atan(abs(self.target[1] - self.rect.centery)/abs(self.target[0] - self.rect.centerx))*57.2958
-            self.rotation = math.round(self.rotation)
-        except:
-            pass
-        if (self.target[0] < self.rect.centerx and self.target[1] < self.rect.centery):
-            self.rotation = -self.rotation
-        elif (self.target[0] > self.rect.centerx and self.target[1] > self.rect.centery):
-            self.rotation = -self.rotation
-        elif (self.target[0] < self.rect.centerx and self.target[1] > self.rect.centery):
-            self.rotation = -self.rotation+180
-
+        if self.target[0] < self.rect.centerx:
+            self.rotation = 180
+        elif self.target[0] > self.rect.centerx:
+            self.rotation = 0
+        if self.target[1] < self.rect.centery:
+            self.rotation = 90
+        elif self.target[1] > self.rect.centery:
+            self.rotation = 270
         if self.rotated != self.rotation:
             if self.rotated < self.rotation:
-                self.rotated += 1
+                self.rotated += 10
             if self.rotated > self.rotation:
-                self.rotated -= 1
+                self.rotated -= 10
         self.image = pygame.transform.rotate(self.originalimage, round(self.rotated))
         oldc = self.rect.center
         self.rect = self.image.get_rect()

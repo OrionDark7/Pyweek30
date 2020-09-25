@@ -86,7 +86,7 @@ class EffectField(pygame.sprite.Sprite):
 class Tower(pygame.sprite.Sprite):
     def __init__(self, position, type, gamepos, fieldgrp):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load("./assets/graphics/"+type+".png")
+        self.image = pygame.image.load("./assets/graphics/towers/"+type+".png")
         self.originalimage = self.image
         self.rect = self.image.get_rect()
         self.rect.center = position

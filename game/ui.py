@@ -22,6 +22,24 @@ def text(txt, position, surface, centered=False):
     else:
         surface.blit(render, position)
 
+class effect(pygame.sprite.Sprite):
+    def __init__(self, position, text, speed, cooldown, color=[255, 255, 255]): #cooldown is in ms
+        pygame.sprite.Sprite.__init__(self)
+        self.image = font.render(str(text), 1, color)
+        self.rect = self.image.get_rect()
+        self.rect.center = position
+        self.alpha = 255
+        self.cooldown = int(cooldown)
+        self.max = self.cooldown
+        self.speed = speed
+    def update(self, clock):
+        self.cooldown -= clock.get_time()
+        self.alpha = round((self.cooldown/self.max)*255)
+        self.image.set_alpha(self.alpha)
+        self.rect.centery += clock.get_fps() * self.speed
+        if self.cooldown <= 0:
+            self.kill()
+
 class button(pygame.sprite.Sprite):
     def __init__(self, text, position, bcolor=None, hcolor=None, centered=False):
         pygame.sprite.Sprite.__init__(self)
@@ -68,7 +86,9 @@ class button(pygame.sprite.Sprite):
             self.hovered = True
         if self.hovered:
             self.image = self.image1
-            self.image.set_alpha(128)
+            self.image.set_alpha(255)
         else:
             self.image = self.image2
             self.image.set_alpha(128)
+    def draw(self, surface):
+        surface.blit(self.image, self.rect.topleft)
