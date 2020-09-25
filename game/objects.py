@@ -22,10 +22,18 @@ def GenerateMap():
         listmap.append([])
         for y in range(18):
             listmap[x].append(0)
-            NewTile = Tile([x*40, y*40], "regular")
+            if [x,y] == [31,8] or [x,y] == [31,9]:
+                NewTile = Tile([x * 40, y * 40], "enemyspawn")
+                listmap[x][y] = -1
+            else:
+                NewTile = Tile([x*40, y*40], "tile")
             TileGroup.add(NewTile)
     TowerGroup.add(Tower([40, 360], "base", [0, 9], FieldGroup))
     metadata["base"] = [0, 9]
+    listmap[0][8] = -2
+    listmap[0][9] = -2
+    listmap[1][8] = -2
+    listmap[1][9] = -2
     TowerGroup.add(Tower([20, 420], "shooter",  [0, 11], FieldGroup))
     listmap[0][11] = 1
     TowerGroup.add(Tower([20, 300], "shooter", [0, 8], FieldGroup))
@@ -35,7 +43,7 @@ def GenerateMap():
 class Tile(pygame.sprite.Sprite):
     def __init__(self, position, type, occupied=False):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load("./assets/graphics/tile.png")
+        self.image = pygame.image.load("./assets/graphics/tiles/"+str(type)+".png")
         self.rect = self.image.get_rect()
         self.rect.left, self.rect.top = position
         self.type = str(type)
@@ -112,9 +120,10 @@ class Tower(pygame.sprite.Sprite):
             self.attachedfield = EffectField(self.type, self.rect.center)
             fieldgrp.add(self.attachedfield)
     def heal(self, rate):
-        self.health+=rate
-        if self.health > self.maxhealth:
-            self.health = self.maxhealth
+        if not self.type == "base":
+            self.health+=rate
+            if self.health > self.maxhealth:
+                self.health = self.maxhealth
     def update(self, bulletgrp, enemygrp, towergrp, effectgrp, clock):
         self.cooldown -= clock.get_time()
         if self.target != None:

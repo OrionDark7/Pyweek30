@@ -66,7 +66,7 @@ class Enemy(pygame.sprite.Sprite):
         except:
             outrange = True
         if not outrange:
-            if listmap[pos[0]][pos[1]] != 0:
+            if listmap[pos[0]][pos[1]] > 0:
                 #if listmap[pos[0]][pos[1]] == 2:
                 #    print("in")
                 #    returnval = True

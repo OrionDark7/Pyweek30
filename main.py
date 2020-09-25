@@ -22,6 +22,8 @@ class Highlight(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.surface.Surface([40, 40])
+        self.smallrect = pygame.surface.Surface([30, 30])
+        self.smallrect = self.smallrect.get_rect()
         self.image.fill([255, 255, 255])
         self.image.set_alpha(84)
         self.rect = self.image.get_rect()
@@ -29,6 +31,16 @@ class Highlight(pygame.sprite.Sprite):
     def draw(self):
         global window
         window.blit(self.image, self.rect.topleft)
+    def gettower(self):
+        global towergrp
+        sprite = None
+        oldrect = self.rect
+        self.rect = self.smallrect
+        self.rect.center = oldrect.center
+        if pygame.sprite.spritecollide(self, towergrp, False):
+            sprite = pygame.sprite.spritecollide(self, towergrp, False)[0]
+        self.rect = oldrect
+        return sprite
     def update(self, tilegrp):
         global mouse
         if pygame.sprite.spritecollide(mouse, tilegrp, False):
@@ -86,6 +98,12 @@ def heffect(position, cooldown, color=[255, 255, 255]):
     global effectgrp
     effectgrp.add(ui.heffect(position, cooldown, color))
 
+def normalname(name):
+    nname = name
+    if str(name) == "fxf_slowness":
+        nname = "slowness field"
+    return nname
+
 mouse = Mouse()
 highlight = Highlight()
 
@@ -97,6 +115,7 @@ fps = 60 #hopefully
 cash = 500
 projectedcash = 500
 path = []
+currenttower = None
 wave = 0
 wavespawned = {}
 wavespawns = [[["enemy",5]], [["enemy",10]]]
@@ -114,6 +133,7 @@ descriptions = {"shooter" : ["shoots 2 bullets a second, each bullet does", "10h
 ti = {}
 for tower in builds:
     ti[tower] = pygame.transform.scale2x(pygame.image.load(p["t"]+str(tower)+".png"))
+ti["base"] = pygame.image.load(p["t"]+"base.png")
 
 data = Data()
 data.metadata["basepos"] = [1, 9]
@@ -310,7 +330,7 @@ while running:
             if building != None:
                 window.blit(ti[building], [420, 630])
                 ui.fontsize(21)
-                ui.text(building, [510, 620], window)
+                ui.text(normalname(building), [510, 620], window)
                 ui.fontsize(10)
                 if cash >= buildingcosts[building]:
                     ui.color = [0, 255, 0]
@@ -321,7 +341,13 @@ while running:
                 ui.fontsize(8)
                 ui.text(str(descriptions[building][0]), [510, 675], window)
                 ui.text(str(descriptions[building][1]), [510, 695], window)
+            elif not highlight.gettower() == None:
+                currenttower = highlight.gettower()
+                window.blit(ti[currenttower.type], [600, 560])
+                ui.fontsize(21)
+                ui.text(normalname(str(currenttower.type)), [640, 650], window, centered=True)
             else:
+                currenttower = None
                 gamebuttons.draw(window)
             if len(enemygrp) == 0 and not keepspawning:
                 wavestarted = False
@@ -356,6 +382,7 @@ while running:
         window.fill([0, 0, 0])
         ui.fontsize(24)
         ui.text("level complete!", [640, 180], window, centered=True)
+
     if screen == "paused":
         window.fill([255, 255, 255])
 
