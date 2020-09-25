@@ -4,11 +4,12 @@ from game import objects, entities, ui
 #Page w/Font Used: https://www.dafont.com/8-bit-pusab.font?l[]=10&l[]=1
 
 pygame.init()
+pygame.mixer.init()
 window = pygame.display.set_mode([1280, 720])
 pygame.display.set_caption("Lost in Cyberspace")
 clock = pygame.time.Clock()
 
-p = {"a" : "./assets/", "g" : "./assets/graphics/", "t" : "./assets/graphics/towers/"}
+p = {"a" : "./assets/", "g" : "./assets/graphics/", "t" : "./assets/graphics/towers/", "s":"./assets/sfx/"}
 
 class Mouse(pygame.sprite.Sprite):
     def __init__(self):
@@ -119,10 +120,11 @@ fps = 60 #hopefully
 cash = 500
 projectedcash = 500
 path = []
+playnext = None
 currenttower = None
 wave = 0
 wavespawned = {}
-wavespawns = [[["enemy",5,1000]], [["enemy",10,700]]]
+wavespawns = [[["enemy",5,1000]], [["enemy",10,700]], [["enemy",7,1000],["enemy",7,600],["enemy",7,300]]]
 wavestarted = False
 keepspawning = False
 building = None
@@ -140,6 +142,11 @@ for tower in builds:
     ti[tower] = pygame.transform.scale2x(pygame.image.load(p["t"]+str(tower)+".png"))
 ti["base"] = pygame.image.load(p["t"]+"base.png")
 
+sfxnames = ["basehit", "build", "enemyshoot", "playershoot", "select", "wavestart"]
+sfx = {}
+for name in sfxnames:
+    sfx[name] = pygame.mixer.Sound(p["s"]+str(name)+".wav")
+
 data = Data()
 data.metadata["basepos"] = [1, 9]
 
@@ -155,6 +162,21 @@ gamebuttons.add(buildbutton)
 gamebuttons.add(wavebutton)
 gamebuttons.add(pausebutton)
 gamebuttons.add(hidebutton)
+
+pausebuttons = pygame.sprite.Group()
+ui.fontsize(20)
+resumebutton = ui.button("resume game", [640, 220], [255, 255, 255], [255, 255, 255], True)
+phowtobutton = ui.button("how to play", [640, 320], [255, 255, 255], [255, 255, 255], True)
+psettingsbutton = ui.button("settings", [640, 420], [255, 255, 255], [255, 255, 255], True)
+pquitbutton = ui.button("quit game", [640, 520], [255, 255, 255], [255, 255, 255], True)
+pausebuttons.add(resumebutton)
+pausebuttons.add(phowtobutton)
+pausebuttons.add(psettingsbutton)
+pausebuttons.add(pquitbutton)
+
+pausemenubackdrop = pygame.surface.Surface([360, 480])
+pausemenubackdrop.fill([0, 0, 0, 128])
+pausemenubackdrop.set_alpha(128)
 
 gamemenubackdrop = pygame.surface.Surface([480, 120])
 gamemenubackdrop.fill([0, 0, 0, 128])
@@ -183,116 +205,152 @@ while running:
             if screen == "game":
                 gamebuttons.update(mouse)
                 hidebutton.update(mouse)
+            elif screen == "paused":
+                pausebuttons.update(mouse)
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1: #LEFT BUTTON
-                if building != None:
-                    newgpos = GamePos(highlight.rect.center)
-                    if listmap[newgpos[0]][newgpos[1]]==0:
-                        if not newgpos in path and wavestarted:
-                            if projectedcash >= buildingcosts[building]:
-                                towergrp.add(objects.Tower(highlight.rect.center, building, newgpos, fieldgrp))
-                                data.addmoney -= buildingcosts[building]
-                                projectedcash -= buildingcosts[building]
-                                if building.startswith("wall"):
-                                    listmap[newgpos[0]][newgpos[1]] = 2
+                if screen == "paused":
+                    if resumebutton.click(mouse):
+                        screen = "game"
+                        sfx["select"].play()
+                    if pquitbutton.click(mouse):
+                        running = False
+                        sfx["select"].play()
+                elif screen == "game":
+                    if building != None:
+                        newgpos = GamePos(highlight.rect.center)
+                        if listmap[newgpos[0]][newgpos[1]]==0:
+                            if not newgpos in path and wavestarted:
+                                if projectedcash >= buildingcosts[building]:
+                                    towergrp.add(objects.Tower(highlight.rect.center, building, newgpos, fieldgrp))
+                                    data.addmoney -= buildingcosts[building]
+                                    projectedcash -= buildingcosts[building]
+                                    if building.startswith("wall"):
+                                        listmap[newgpos[0]][newgpos[1]] = 2
+                                    else:
+                                        listmap[newgpos[0]][newgpos[1]] = 1
+                                    effect([480, 580], "-"+str(buildingcosts[building])+" bitcoin", -0.05, 750, color=[255, 255, 0])
+                                    sfx["build"].play()
                                 else:
-                                    listmap[newgpos[0]][newgpos[1]] = 1
-                                effect([480, 580], "-"+str(buildingcosts[building])+" bitcoin", -0.05, 750, color=[255, 255, 0])
-                            else:
-                                effect([640, 580], "not enough money!", -0.05, 750, color=[255, 0, 0])
-                        elif not wavestarted:
-                            if projectedcash >= buildingcosts[building]:
-                                towergrp.add(objects.Tower(highlight.rect.center, building, newgpos, fieldgrp))
-                                data.addmoney -= buildingcosts[building]
-                                projectedcash -= buildingcosts[building]
-                                if building.startswith("wall"):
-                                    listmap[newgpos[0]][newgpos[1]] = 2
+                                    effect([640, 580], "not enough money!", -0.05, 750, color=[255, 0, 0])
+                            elif not wavestarted:
+                                if projectedcash >= buildingcosts[building]:
+                                    towergrp.add(objects.Tower(highlight.rect.center, building, newgpos, fieldgrp))
+                                    data.addmoney -= buildingcosts[building]
+                                    projectedcash -= buildingcosts[building]
+                                    if building.startswith("wall"):
+                                        listmap[newgpos[0]][newgpos[1]] = 2
+                                    else:
+                                        listmap[newgpos[0]][newgpos[1]] = 1
+                                    effect([480, 580], "-"+str(buildingcosts[building])+" bitcoin", -0.05, 750, color=[255, 255, 0])
+                                    sfx["build"].play()
                                 else:
-                                    listmap[newgpos[0]][newgpos[1]] = 1
-                                effect([480, 580], "-"+str(buildingcosts[building])+" bitcoin", -0.05, 750, color=[255, 255, 0])
+                                    effect([640, 580], "not enough money!", -0.05, 750, color=[255, 0, 0])
                             else:
-                                effect([640, 580], "not enough money!", -0.05, 750, color=[255, 0, 0])
+                                effect([640, 580], "tower obstructs enemy path!", -0.05, 750, color=[255, 0, 0])
                         else:
-                            effect([640, 580], "tower obstructs enemy path!", -0.05, 750, color=[255, 0, 0])
+                            effect([640, 580], "tile is occupied!", -0.05, 750, color=[255, 0, 0])
                     else:
-                        effect([640, 580], "tile is occupied!", -0.05, 750, color=[255, 0, 0])
-                else:
-                    if pausebutton.click(mouse) and showmenu:
-                        screen = "paused"
-                    elif wavebutton.click(mouse) and not wavestarted and showmenu and building == None:
-                        if CheckAccesible([31, 9]) and CheckAccesible([31, 8]):
-                            wavebutton.kill()
-                            wavestarted = True
-                            keepspawning = True
-                            wave += 1
-                            path = GetPath([31, 9])
-                            try:
-                                wavespawned = wavespawns[wave - 1]
-                            except:
-                                screen = "levelcomplete"
-                            pygame.time.set_timer(pygame.USEREVENT, 1000)
-                        else:
-                            effect([640, 580], "base not accesible!", -0.0375, 1000, color=[255, 0, 0])
-                    elif buildbutton.click(mouse) and showmenu and building == None:
-                        buildindex = 0
-                        switchbuild()
-                    elif hidebutton.click(mouse) and showmenu and building == None:
-                        showmenu = False
+                        if pausebutton.click(mouse) and showmenu:
+                            screen = "paused"
+                            sfx["select"].play()
+                        elif wavebutton.click(mouse) and not wavestarted and showmenu and building == None:
+                            if CheckAccesible([31, 9]) and CheckAccesible([31, 8]):
+                                wavebutton.kill()
+                                wavestarted = True
+                                keepspawning = True
+                                wave += 1
+                                path = GetPath([31, 9])
+                                sfx["select"].play()
+                                playnext = "wavestart"
+                                pygame.time.set_timer(pygame.USEREVENT + 1, 60)
+                                try:
+                                    wavespawned = wavespawns[wave - 1]
+                                except:
+                                    screen = "levelcomplete"
+                                pygame.time.set_timer(pygame.USEREVENT, 1000)
+                            else:
+                                effect([640, 580], "base not accesible!", -0.0375, 1000, color=[255, 0, 0])
+                        elif buildbutton.click(mouse) and showmenu and building == None:
+                            buildindex = 0
+                            switchbuild()
+                            sfx["select"].play()
+                        elif hidebutton.click(mouse) and showmenu and building == None:
+                            showmenu = False
+                            sfx["select"].play()
             elif event.button == 4 and building != None:
                 if buildindex == len(builds)-1:
                     buildindex = 0
                 else:
                     buildindex += 1
                 switchbuild()
+                sfx["select"].play()
             elif event.button == 5 and building != None:
                 if buildindex == 0:
                     buildindex = len(builds)-1
                 else:
                     buildindex -= 1
                 switchbuild()
+                sfx["select"].play()
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_m and building == None:
-                showmenu = not showmenu
-            if event.key == pygame.K_b and building == None:
-                buildindex = 0
-                switchbuild()
-            elif event.key == pygame.K_b and building != None:
-                building = None
-                buildimg = None
-            if bool(event.key == pygame.K_LEFT or event.key == pygame.K_DOWN) and building != None:
-                if buildindex == 0:
-                    buildindex = len(builds)-1
-                else:
-                    buildindex -= 1
-                switchbuild()
-            if bool(event.key == pygame.K_RIGHT or event.key == pygame.K_UP) and building != None:
-                if buildindex == len(builds)-1:
+            if screen == "paused":
+                if event.key == pygame.K_ESCAPE:
+                    screen = "game"
+                    sfx["select"].play()
+            elif screen == "game":
+                if event.key == pygame.K_ESCAPE:
+                    screen = "paused"
+                    sfx["select"].play()
+                if event.key == pygame.K_m and building == None:
+                    showmenu = not showmenu
+                    sfx["select"].play()
+                if event.key == pygame.K_b and building == None:
                     buildindex = 0
-                else:
-                    buildindex += 1
-                switchbuild()
-            if event.key == pygame.K_w and not wavestarted:
-                if CheckAccesible([31, 9]) and CheckAccesible([31, 8]):
-                    wavebutton.kill()
-                    wavestarted = True
-                    keepspawning = True
-                    wave += 1
-                    path = GetPath([31, 9])
-                    try:
-                        wavespawned = wavespawns[wave - 1]
-                    except:
-                        screen = "levelcomplete"
-                    pygame.time.set_timer(pygame.USEREVENT, 1000)
-                else:
-                    effect([640, 580], "base not accesible!", -0.0375, 1000, color=[255, 0, 0])
-            if event.key == pygame.K_l:
-                drawlistmap()
-            if event.key == pygame.K_F11:
-                fullscreen = not fullscreen
-                if fullscreen:
-                    window = pygame.display.set_mode([1280, 720], pygame.FULLSCREEN)
-                else:
-                    window = pygame.display.set_mode([1280, 720])
+                    switchbuild()
+                    sfx["select"].play()
+                elif event.key == pygame.K_b and building != None:
+                    building = None
+                    buildimg = None
+                    sfx["select"].play()
+                if bool(event.key == pygame.K_LEFT or event.key == pygame.K_DOWN) and building != None:
+                    if buildindex == 0:
+                        buildindex = len(builds)-1
+                    else:
+                        buildindex -= 1
+                    switchbuild()
+                    sfx["select"].play()
+                if bool(event.key == pygame.K_RIGHT or event.key == pygame.K_UP) and building != None:
+                    if buildindex == len(builds)-1:
+                        buildindex = 0
+                    else:
+                        buildindex += 1
+                    switchbuild()
+                    sfx["select"].play()
+                if event.key == pygame.K_w and not wavestarted:
+                    if CheckAccesible([31, 9]) and CheckAccesible([31, 8]):
+                        wavebutton.kill()
+                        wavestarted = True
+                        keepspawning = True
+                        wave += 1
+                        path = GetPath([31, 9])
+                        sfx["select"].play()
+                        playnext = "wavestart"
+                        pygame.time.set_timer(pygame.USEREVENT+1, 60)
+                        try:
+                            wavespawned = wavespawns[wave - 1]
+                        except:
+                            screen = "levelcomplete"
+                        pygame.time.set_timer(pygame.USEREVENT, 1000)
+                    else:
+                        effect([640, 580], "base not accesible!", -0.0375, 1000, color=[255, 0, 0])
+                #if event.key == pygame.K_l:
+                #    drawlistmap()
+                if event.key == pygame.K_F11:
+                    fullscreen = not fullscreen
+                    if fullscreen:
+                        window = pygame.display.set_mode([1280, 720], pygame.FULLSCREEN)
+                    else:
+                        window = pygame.display.set_mode([1280, 720])
         if event.type == pygame.USEREVENT and wavestarted and keepspawning and screen == "game":
             try:
                 Enemy([31, random.randint(8,9)], wavespawned[0][0])
@@ -307,6 +365,10 @@ while running:
                 keepspawning = False
             if wave+1 == len(wavespawns)+1 and len(enemygrp) == 0:
                 screen = "levelcomplete"
+        if event.type == pygame.USEREVENT+1 and playnext != None:
+            sfx[str(playnext)].play()
+            playnext = None
+            pygame.time.set_timer(pygame.USEREVENT + 1, 60)
     if screen == "game":
         window.fill([255, 255, 255])
 
@@ -387,7 +449,7 @@ while running:
         towergrp.update(bulletgrp, enemygrp, towergrp, effectgrp, clock)
         bulletgrp.update(enemygrp, towergrp, effectgrp, data)
         ebulletgrp.update(enemygrp, towergrp, effectgrp, data)
-        enemygrp.update(fps, clock, data, ebulletgrp, highlight)
+        enemygrp.update(fps, clock, data, ebulletgrp, effectgrp, highlight)
         fieldgrp.update()
         effectgrp.update(clock)
         ui.fontsize(18)
@@ -412,6 +474,12 @@ while running:
         towergrp.draw(window)
         bulletgrp.draw(window)
         enemygrp.draw(window)
+
+        window.blit(pausemenubackdrop, [460, 120])
+        ui.fontsize(30)
+        ui.text("PAUSED", [640, 120], window, centered=True)
+
+        pausebuttons.draw(window)
 
     if screen == "gameover":
         window.fill([255, 255, 255])

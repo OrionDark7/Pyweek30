@@ -1,9 +1,22 @@
 import pygame, math, random
 from pygame.math import Vector2
-from game import objects
+from game import objects, ui
 
-enemies = {"enemy":[500, 50, 0.05, False]}
+pygame.init()
+pygame.mixer.init()
+
+enemies = {"enemy":[500, 50, 0.05, False], "enemyflying":[500, 50, 0.05, True]}
+sfxnames = ["basehit", "build", "enemyshoot", "playershoot", "select"]
+sfx = {}
+for name in sfxnames:
+    sfx[name] = pygame.mixer.Sound("./assets/sfx/"+str(name)+".wav")
 #cooldown, hp, speed, airborne?
+
+def effect(position, text, speed, cooldown, effectgrp, color=[255, 255, 255]):
+    prevsize = ui.size
+    ui.fontsize(10)
+    effectgrp.add(ui.effect(position, text, speed, cooldown, color))
+    ui.fontsize(prevsize)
 
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, position, target, gamepos, type="enemy"):
@@ -106,7 +119,7 @@ class Enemy(pygame.sprite.Sprite):
             if not pos[0]-1 < 0 and not pos[1] < 0 and not pos[0]-1>31 and not pos[1]>15:
                 self.queue.append([[pos[0]-1, pos[1]], pos])
         return returnval
-    def update(self, fps, clock, data, bulletgrp, highlight):
+    def update(self, fps, clock, data, bulletgrp, effectgrp, highlight):
         if self.shooting:
             self.shootcooldown -= clock.get_time()
         if self.fxcooldown > 0:
@@ -116,6 +129,7 @@ class Enemy(pygame.sprite.Sprite):
             tempvelocity = Vector2(self.target.rect.centerx - self.rect.centerx, self.target.rect.centery - self.rect.centery).normalize() * clock.get_fps() * 0.1
             bulletgrp.add(objects.Bullet(self, pos, tempvelocity, self.rotation))
             self.shootcooldown = self.attributes[0]
+            sfx["enemyshoot"].play()
         if self.fxcooldown <= 0:
             if self.effect == "slowness":
                 self.speed = self.attributes[2]
@@ -167,4 +181,6 @@ class Enemy(pygame.sprite.Sprite):
                     self.shootingtarget = highlight.gettower()
         if self.health <= 0:
             self.kill()
-            data.addmoney = int(round(self.attributes[1]/random.randint(9, 11)))
+            cash = int(round(self.attributes[1]/random.randint(9, 11)))
+            effect(self.rect.center, "+"+str(cash)+"B", 0.05, 100, effectgrp, [85, 209, 72])
+            data.addmoney += cash

@@ -3,6 +3,7 @@ from pygame.color import THECOLORS
 
 pygame.init()
 pygame.font.init()
+pygame.mixer.init()
 
 size = 18
 color = THECOLORS["white"]

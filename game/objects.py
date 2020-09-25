@@ -2,6 +2,9 @@ import pygame, math, random
 from pygame.math import Vector2
 from game import ui
 
+pygame.init()
+pygame.mixer.init()
+
 towers = {"shooter" : [500, 600, 50],
           "shooter_rapid" : [150, 300, 40],
           "base" : [0, 0, 250],
@@ -9,11 +12,21 @@ towers = {"shooter" : [500, 600, 50],
           "healer" : [5000, 190, 50],
           "fxf_slowness" : [4000, 280, 100]}
 bullets = {"shooter" : [10], "shooter_rapid" : [5], "enemy":[5]}
+sfxnames = ["basehit", "build", "enemyshoot", "playershoot", "select"]
+sfx = {}
+for name in sfxnames:
+    sfx[name] = pygame.mixer.Sound("./assets/sfx/"+str(name)+".wav")
 #name - speed (ms/action), range (pixels), hp
 #name - damage
 
 def heffect(position, cooldown, effectgrp, color=[255, 255, 255]):
     effectgrp.add(ui.heffect(position, cooldown, color))
+
+def effect(position, text, speed, cooldown, effectgrp, color=[255, 255, 255]):
+    prevsize = ui.size
+    ui.fontsize(10)
+    effectgrp.add(ui.effect(position, text, speed, cooldown, color))
+    ui.fontsize(prevsize)
 
 def GenerateMap():
     #just blank for now, maybe add presets later? 9.19.2020
@@ -145,6 +158,7 @@ class Tower(pygame.sprite.Sprite):
                 pos = (self.rect.centerx + self.velocity.x*10, self.rect.centery + self.velocity.y*10)
                 newbullet = Bullet(self, pos, self.velocity, self.rotation)
                 bulletgrp.add(newbullet)
+                sfx["playershoot"].play()
             elif self.type.startswith("healer"):
                 oldrect = self.rect
                 self.rect = self.rangesurface
@@ -241,9 +255,13 @@ class Bullet(pygame.sprite.Sprite):
                 sprite.mask = pygame.mask.from_surface(sprite.image)
                 if pygame.sprite.collide_mask(self, sprite):
                     sprite.health -= self.attributes[0]
+                    if sprite.type == "base":
+                        sfx["basehit"].play()
                     if sprite.health <= 0:
                         sprite.kill()
                         heffect(sprite.rect.center, 500, effectgrp, [255, 0, 0])
+                    else:
+                        heffect(sprite.rect.center, 250, effectgrp, [255, 128, 0])
                     self.kill()
         else:
             if pygame.sprite.spritecollide(self, enemygrp, False):
@@ -252,6 +270,7 @@ class Bullet(pygame.sprite.Sprite):
                 if pygame.sprite.collide_mask(self, sprite):
                     sprite.health -= self.attributes[0]
                     if sprite.health <= 0:
-                        sprite.kill()
-                        data.addmoney = int(round(sprite.attributes[1] / random.randint(9, 11)))
+                        cash = int(round(sprite.attributes[1] / random.randint(9, 11)))
+                        effect(sprite.rect.center, "+" + str(cash) + "B", -0.05, 500, effectgrp, [85, 209, 72])
+                        data.addmoney += cash
                     self.kill()
