@@ -2,8 +2,13 @@ import pygame, math, random
 from pygame.math import Vector2
 from game import ui
 
-towers = {"shooter" : [500, 600, 50], "base" : [0, 0, 250], "wall" : [0, 0, 100], "healer" : [5000, 190, 50], "fxf_slowness" : [4000, 280, 100]}
-bullets = {"shooter" : [10]}
+towers = {"shooter" : [500, 600, 50],
+          "shooter_rapid" : [150, 300, 40],
+          "base" : [0, 0, 250],
+          "wall" : [0, 0, 100],
+          "healer" : [5000, 190, 50],
+          "fxf_slowness" : [4000, 280, 100]}
+bullets = {"shooter" : [10], "shooter_rapid" : [5], "enemy":[5]}
 #name - speed (ms/action), range (pixels), hp
 #name - damage
 
@@ -17,6 +22,7 @@ def GenerateMap():
     FieldGroup = pygame.sprite.Group()
     listmap = []
     metadata = {}
+    base = None
 
     for x in range(32):
         listmap.append([])
@@ -28,7 +34,8 @@ def GenerateMap():
             else:
                 NewTile = Tile([x*40, y*40], "tile")
             TileGroup.add(NewTile)
-    TowerGroup.add(Tower([40, 360], "base", [0, 9], FieldGroup))
+    base = Tower([40, 360], "base", [0, 9], FieldGroup)
+    TowerGroup.add(base)
     metadata["base"] = [0, 9]
     listmap[0][8] = -2
     listmap[0][9] = -2
@@ -38,7 +45,7 @@ def GenerateMap():
     listmap[0][11] = 1
     TowerGroup.add(Tower([20, 300], "shooter", [0, 8], FieldGroup))
     listmap[0][8] = 1
-    return TileGroup, TowerGroup, listmap, metadata
+    return TileGroup, TowerGroup, listmap, metadata, base
 
 class Tile(pygame.sprite.Sprite):
     def __init__(self, position, type, occupied=False):
@@ -146,7 +153,8 @@ class Tower(pygame.sprite.Sprite):
                     sprites = pygame.sprite.spritecollide(self, towergrp, False)
                     for s in sprites:
                         s.heal(2)
-                        heffect(s.rect.center, 500, effectgrp, [85, 209, 72])
+                        if not s.type == "base":
+                            heffect(s.rect.center, 500, effectgrp, [85, 209, 72])
                 self.rect = oldrect
             self.cooldown = self.attributes[0]
         if self.type.startswith("fxf"):
@@ -205,7 +213,10 @@ class Tower(pygame.sprite.Sprite):
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, parent, position, velocity, rotation):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load("./assets/graphics/bullet.png")
+        if parent.type.startswith("enemy"):
+            self.image = pygame.image.load("./assets/graphics/enemybullet.png")
+        else:
+            self.image = pygame.image.load("./assets/graphics/bullet.png")
         self.originalimage = self.image
         self.rotation = rotation
         self.image = pygame.transform.rotate(self.originalimage, round(self.rotation) + 90)
@@ -216,17 +227,31 @@ class Bullet(pygame.sprite.Sprite):
         self.attributes = bullets[self.parent.type]
         self.velocity = velocity
         self.mask = pygame.mask.from_surface(self.image)
-    def update(self, enemygrp, data):
+    def update(self, enemygrp, towergrp, effectgrp, data):
         self.position += self.velocity
         self.rect.center = self.position.x, self.position.y
+        if not self.parent.type.startswith("enemy"):
+            if not self.rect.colliderect(self.parent.rangesurface):
+                self.kill()
         if (self.rect.right < 0 or self.rect.left > 1280 or self.rect.top > 720 or self.rect.bottom < 0):
             self.kill()
-        if pygame.sprite.spritecollide(self, enemygrp, False):
-            sprite = pygame.sprite.spritecollide(self, enemygrp, False)[0]
-            sprite.mask = pygame.mask.from_surface(sprite.image)
-            if pygame.sprite.collide_mask(self, sprite):
-                sprite.health -= self.attributes[0]
-                if sprite.health <= 0:
-                    sprite.kill()
-                    data.addmoney = int(round(sprite.attributes[1] / random.randint(9, 11)))
-                self.kill()
+        if self.parent.type.startswith("enemy"):
+            if pygame.sprite.spritecollide(self, towergrp, False):
+                sprite = pygame.sprite.spritecollide(self, towergrp, False)[0]
+                sprite.mask = pygame.mask.from_surface(sprite.image)
+                if pygame.sprite.collide_mask(self, sprite):
+                    sprite.health -= self.attributes[0]
+                    if sprite.health <= 0:
+                        sprite.kill()
+                        heffect(sprite.rect.center, 500, effectgrp, [255, 0, 0])
+                    self.kill()
+        else:
+            if pygame.sprite.spritecollide(self, enemygrp, False):
+                sprite = pygame.sprite.spritecollide(self, enemygrp, False)[0]
+                sprite.mask = pygame.mask.from_surface(sprite.image)
+                if pygame.sprite.collide_mask(self, sprite):
+                    sprite.health -= self.attributes[0]
+                    if sprite.health <= 0:
+                        sprite.kill()
+                        data.addmoney = int(round(sprite.attributes[1] / random.randint(9, 11)))
+                    self.kill()
