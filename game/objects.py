@@ -1,10 +1,14 @@
 import pygame, math, random
 from pygame.math import Vector2
+from game import ui
 
 towers = {"shooter" : [500, 600, 50], "base" : [0, 0, 250], "wall" : [0, 0, 100], "healer" : [5000, 190, 50], "fxf_slowness" : [4000, 280, 100]}
 bullets = {"shooter" : [10]}
 #name - speed (ms/action), range (pixels), hp
 #name - damage
+
+def heffect(position, cooldown, effectgrp, color=[255, 255, 255]):
+    effectgrp.add(ui.heffect(position, cooldown, color))
 
 def GenerateMap():
     #just blank for now, maybe add presets later? 9.19.2020
@@ -101,7 +105,7 @@ class Tower(pygame.sprite.Sprite):
         self.maxhealth = self.health
         self.attachedfield = None
         self.rotated = 0
-        if self.type.startswith("shooter") or self.type.startswith("fxf"):
+        if self.type.startswith("shooter") or self.type.startswith("fxf") or self.type.startswith("healer"):
             self.rangesurface = pygame.surface.Surface([self.attributes[1], self.attributes[1]])
             self.rangesurface = self.rangesurface.get_rect()
         if self.type.startswith("fxf"):
@@ -111,7 +115,7 @@ class Tower(pygame.sprite.Sprite):
         self.health+=rate
         if self.health > self.maxhealth:
             self.health = self.maxhealth
-    def update(self, bulletgrp, enemygrp, towergrp, clock):
+    def update(self, bulletgrp, enemygrp, towergrp, effectgrp, clock):
         self.cooldown -= clock.get_time()
         if self.target != None:
             if not self.target.alive():
@@ -133,6 +137,7 @@ class Tower(pygame.sprite.Sprite):
                     sprites = pygame.sprite.spritecollide(self, towergrp, False)
                     for s in sprites:
                         s.heal(2)
+                        heffect(s.rect.center, 500, effectgrp, [85, 209, 72])
                 self.rect = oldrect
             self.cooldown = self.attributes[0]
         if self.type.startswith("fxf"):

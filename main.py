@@ -61,6 +61,12 @@ def CheckAccesible(pos):
     else:
         return True
 
+def GetPath(pos):
+    global enemygrp, listmap
+    newenemy = entities.Enemy([(pos[0] * 40) - 20, (pos[1] * 40) - 20], pos, pos)
+    newenemy.targetqueue = newenemy.pathfinding(listmap, [1, 9])
+    return newenemy.targetqueue
+
 def GamePos(pos):
     return [int((pos[0]-20)/40), int((pos[1]-20)/40)]
 
@@ -72,9 +78,13 @@ def drawlistmap():
 def effect(position, text, speed, cooldown, color=[255, 255, 255]):
     global effectgrp
     prevsize = ui.size
-    ui.fontsize(8)
+    ui.fontsize(10)
     effectgrp.add(ui.effect(position, text, speed, cooldown, color))
     ui.fontsize(prevsize)
+
+def heffect(position, cooldown, color=[255, 255, 255]):
+    global effectgrp
+    effectgrp.add(ui.heffect(position, cooldown, color))
 
 mouse = Mouse()
 highlight = Highlight()
@@ -86,6 +96,7 @@ fps = 60 #hopefully
 
 cash = 500
 projectedcash = 500
+path = []
 wave = 0
 wavespawned = {}
 wavespawns = [[["enemy",5]], [["enemy",10]]]
@@ -148,33 +159,53 @@ while running:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1: #LEFT BUTTON
                 if building != None:
-                    if projectedcash >= buildingcosts[building]:
-                        newgpos = GamePos(highlight.rect.center)
-                        towergrp.add(objects.Tower(highlight.rect.center, building, newgpos, fieldgrp))
-                        data.addmoney -= buildingcosts[building]
-                        projectedcash -= buildingcosts[building]
-                        if building.startswith("wall"):
-                            listmap[newgpos[0]][newgpos[1]] = 2
+                    newgpos = GamePos(highlight.rect.center)
+                    if listmap[newgpos[0]][newgpos[1]]==0:
+                        if not newgpos in path and wavestarted:
+                            if projectedcash >= buildingcosts[building]:
+                                towergrp.add(objects.Tower(highlight.rect.center, building, newgpos, fieldgrp))
+                                data.addmoney -= buildingcosts[building]
+                                projectedcash -= buildingcosts[building]
+                                if building.startswith("wall"):
+                                    listmap[newgpos[0]][newgpos[1]] = 2
+                                else:
+                                    listmap[newgpos[0]][newgpos[1]] = 1
+                                effect([480, 580], "-"+str(buildingcosts[building])+" bitcoin", -0.05, 750, color=[255, 255, 0])
+                            else:
+                                effect([640, 580], "not enough money!", -0.05, 750, color=[255, 0, 0])
+                        elif not wavestarted:
+                            if projectedcash >= buildingcosts[building]:
+                                towergrp.add(objects.Tower(highlight.rect.center, building, newgpos, fieldgrp))
+                                data.addmoney -= buildingcosts[building]
+                                projectedcash -= buildingcosts[building]
+                                if building.startswith("wall"):
+                                    listmap[newgpos[0]][newgpos[1]] = 2
+                                else:
+                                    listmap[newgpos[0]][newgpos[1]] = 1
+                                effect([480, 580], "-"+str(buildingcosts[building])+" bitcoin", -0.05, 750, color=[255, 255, 0])
+                            else:
+                                effect([640, 580], "not enough money!", -0.05, 750, color=[255, 0, 0])
                         else:
-                            listmap[newgpos[0]][newgpos[1]] = 1
-
+                            effect([640, 580], "tower obstructs enemy path!", -0.05, 750, color=[255, 0, 0])
                     else:
-                        effect([640, 580], "not enough money!", -0.05, 750, color=[255, 0, 0])
+                        effect([640, 580], "tile is occupied!", -0.05, 750, color=[255, 0, 0])
                 else:
                     if pausebutton.click(mouse) and showmenu:
                         screen = "paused"
                     elif wavebutton.click(mouse) and not wavestarted and showmenu and building == None:
                         if CheckAccesible([31, 9]):
+                            wavebutton.kill()
                             wavestarted = True
                             keepspawning = True
                             wave += 1
+                            path = GetPath([31, 9])
                             try:
                                 wavespawned = wavespawns[wave - 1]
                             except:
                                 screen = "levelcomplete"
                             pygame.time.set_timer(pygame.USEREVENT, 1000)
                         else:
-                            print("Can't reach base!!!")
+                            effect([640, 580], "base not accesible!", -0.0375, 1000, color=[255, 0, 0])
                     elif buildbutton.click(mouse) and showmenu and building == None:
                         buildindex = 0
                         switchbuild()
@@ -193,7 +224,7 @@ while running:
                     buildindex -= 1
                 switchbuild()
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_m:
+            if event.key == pygame.K_m and building == None:
                 showmenu = not showmenu
             if event.key == pygame.K_b and building == None:
                 buildindex = 0
@@ -215,9 +246,11 @@ while running:
                 switchbuild()
             if event.key == pygame.K_w and not wavestarted:
                 if CheckAccesible([31, 9]):
+                    wavebutton.kill()
                     wavestarted = True
                     keepspawning = True
                     wave += 1
+                    path = GetPath([31, 9])
                     try:
                         wavespawned = wavespawns[wave - 1]
                     except:
@@ -292,6 +325,8 @@ while running:
                 gamebuttons.draw(window)
             if len(enemygrp) == 0 and not keepspawning:
                 wavestarted = False
+                if not wavebutton in gamebuttons:
+                    gamebuttons.add(wavebutton)
             ui.fontsize(18)
         if data.addmoney > 0:
             cash += 1
@@ -302,7 +337,7 @@ while running:
         else:
             projectedcash = cash
 
-        towergrp.update(bulletgrp, enemygrp, towergrp, clock)
+        towergrp.update(bulletgrp, enemygrp, towergrp, effectgrp, clock)
         bulletgrp.update(enemygrp, data)
         enemygrp.update(fps, clock, data)
         fieldgrp.update()

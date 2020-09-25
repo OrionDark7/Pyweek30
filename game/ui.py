@@ -40,6 +40,30 @@ class effect(pygame.sprite.Sprite):
         if self.cooldown <= 0:
             self.kill()
 
+class heffect(pygame.sprite.Sprite):
+    def __init__(self, position, cooldown, color=[255, 255, 255]): #cooldown is in ms
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.surface.Surface([40, 40])
+        self.image.fill(color)
+        self.rect = self.image.get_rect()
+        self.rect.center = position
+        self.alpha = 240
+        self.cooldown = int(cooldown)
+        self.max = self.cooldown
+        self.position = position
+    def update(self, clock):
+        self.cooldown -= clock.get_time()
+        self.alpha = round((self.cooldown/self.max)*240)
+        self.image.set_alpha(self.alpha)
+        try:
+            self.image = pygame.transform.scale(self.image, [round((self.cooldown/self.max)*40), round((self.cooldown/self.max)*40)])
+        except:
+            self.kill()
+        self.rect = self.image.get_rect()
+        self.rect.center = self.position
+        if self.cooldown <= 0:
+            self.kill()
+
 class button(pygame.sprite.Sprite):
     def __init__(self, text, position, bcolor=None, hcolor=None, centered=False):
         pygame.sprite.Sprite.__init__(self)
