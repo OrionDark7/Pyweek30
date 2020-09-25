@@ -23,7 +23,7 @@ class Highlight(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.surface.Surface([40, 40])
-        self.smallrect = pygame.surface.Surface([30, 30])
+        self.smallrect = pygame.surface.Surface([20, 20])
         self.smallrect = self.smallrect.get_rect()
         self.image.fill([255, 255, 255])
         self.image.set_alpha(84)
@@ -41,6 +41,7 @@ class Highlight(pygame.sprite.Sprite):
         if pygame.sprite.spritecollide(self, towergrp, False):
             sprite = pygame.sprite.spritecollide(self, towergrp, False)[0]
         self.rect = oldrect
+        self.rect.center = oldrect.center
         return sprite
     def update(self, tilegrp):
         global mouse
@@ -107,6 +108,8 @@ def normalname(name):
         nname = "rapid fire turret"
     if str(name) == "shooter":
         nname = "basic turret"
+    if str(name) == "shooter_sniper":
+        nname = "sniper turret"
     return nname
 
 mouse = Mouse()
@@ -124,16 +127,17 @@ playnext = None
 currenttower = None
 wave = 0
 wavespawned = {}
-wavespawns = [[["enemy",5,1000]], [["enemy",10,700]], [["enemy",7,1000],["enemy",7,600],["enemy",7,300]]]
+wavespawns = [[["enemy",1,1000]], [["enemy",10,700]], [["enemy",7,1000],["enemy",7,600],["enemy",7,300]]]
 wavestarted = False
 keepspawning = False
 building = None
 buildimg = None
-buildingcosts = {"shooter" : 100, "shooter_rapid" : 130, "wall" : 25, "healer" : 250, "fxf_slowness" : 500}
+buildingcosts = {"shooter" : 100, "shooter_rapid" : 125, "shooter_sniper" : 125, "wall" : 25, "healer" : 250, "fxf_slowness" : 500}
 buildindex = 0
-builds = ["shooter", "shooter_rapid","wall", "healer", "fxf_slowness"]
+builds = ["shooter", "shooter_rapid", "shooter_sniper", "wall", "healer", "fxf_slowness"]
 descriptions = {"shooter" : ["shoots 2 bullets a second, each bullet does", "10hp of damage. medium range."],
                 "shooter_rapid" : ["shoots around 7 bullets a second, each bullet does", "5hp of damage. short range."],
+                "shooter_sniper" : ["shoots around 1 bullet a second, each bullet does", "20hp of damage. long range."],
                 "wall" : ["i don't know, it exists? it protects stuff sometimes?", "it has 100 hitpoints, so that's pretty cool i guess."],
                 "healer" : ["this tower heals towers within a 2 tile radius.", "it heals 2hp every 5 seconds."],
                 "fxf_slowness" : ["all enemies that come within the effect field are", "slowed down to half speed for 4 seconds."]}

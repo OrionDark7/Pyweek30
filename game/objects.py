@@ -7,11 +7,12 @@ pygame.mixer.init()
 
 towers = {"shooter" : [500, 600, 50],
           "shooter_rapid" : [150, 300, 40],
+          "shooter_sniper" : [1250, 850, 45],
           "base" : [0, 0, 250],
           "wall" : [0, 0, 100],
           "healer" : [5000, 190, 50],
           "fxf_slowness" : [4000, 280, 100]}
-bullets = {"shooter" : [10], "shooter_rapid" : [5], "enemy":[5]}
+bullets = {"shooter" : [10], "shooter_rapid" : [5], "shooter_sniper" : [20], "enemy":[5]}
 sfxnames = ["basehit", "build", "enemyshoot", "playershoot", "select"]
 sfx = {}
 for name in sfxnames:

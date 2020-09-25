@@ -136,18 +136,20 @@ class Enemy(pygame.sprite.Sprite):
             self.effect = None
             try:
                 self.velocity = Vector2(self.target[0] - self.rect.centerx, self.target[1] - self.rect.centery).normalize() * fps * self.speed
+                self.velocity = Vector2(round(self.velocity.x), round(self.velocity.y))
             except:
                 pass
             if not self.shooting:
                 self.position += self.velocity
                 self.rect.center = round(self.position[0]), round(self.position[1])
-                if self.target[0] < self.rect.centerx:
+                print(self.velocity)
+                if self.velocity.x == -3:
                     self.rotation = 180
-                elif self.target[0] > self.rect.centerx:
+                if self.velocity.x == 3:
                     self.rotation = 0
-                if self.target[1] < self.rect.centery:
+                if self.velocity.y == -3:
                     self.rotation = 90
-                elif self.target[1] > self.rect.centery:
+                if self.velocity.y == 3:
                     self.rotation = 270
                 if self.rotated != self.rotation:
                     if self.rotated < self.rotation:
@@ -162,7 +164,7 @@ class Enemy(pygame.sprite.Sprite):
                     self.rotated += 5
                 if self.rotated > self.rotation:
                     self.rotated -= 5
-        self.image = pygame.transform.rotate(self.originalimage, round(self.rotated))
+        self.image = pygame.transform.rotate(self.originalimage, round(self.rotation))
         oldc = self.rect.center
         self.rect = self.image.get_rect()
         self.rect.center = oldc
@@ -179,6 +181,7 @@ class Enemy(pygame.sprite.Sprite):
                     oldpos = highlight.rect.center
                     highlight.rect.center = self.originaltarget
                     self.shootingtarget = highlight.gettower()
+                    highlight.rect.center = oldpos
         if self.health <= 0:
             self.kill()
             cash = int(round(self.attributes[1]/random.randint(9, 11)))
