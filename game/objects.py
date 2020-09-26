@@ -8,11 +8,15 @@ pygame.mixer.init()
 towers = {"shooter" : [500, 600, 50],
           "shooter_rapid" : [150, 300, 40],
           "shooter_sniper" : [1250, 850, 45],
-          "base" : [0, 0, 500],
+          "base" : [0, 0, 1000],
           "wall" : [0, 0, 100],
+          "wall_strong" : [0, 0, 250],
           "healer" : [5000, 190, 50],
-          "fxf_slowness" : [2500, 280, 200]}
-bullets = {"shooter" : [10], "shooter_rapid" : [5], "shooter_sniper" : [20], "enemy":[5], "enemyflying":[7],  "enemyshooter":[5], "enemyshooterflying":[7], "enemyfxf":[6], "enemyfxfflying":[8]}
+          "fxf_slowness" : [2500, 280, 200],
+          "fxf_damage" : [20000, 280, 200],
+          "boost_cooldown" : [0, 220, 150],
+          "boost_damage" : [0, 220, 150]}
+bullets = {"shooter" : [10], "shooter_rapid" : [5], "shooter_sniper" : [20], "enemy":[5], "enemyflying":[7],  "enemyshooter":[5], "enemyshooterflying":[7], "enemyfxf":[6], "enemyfxfflying":[8], "wallshooter":[10], "enemyboost":[6], "enemyboostflying":[8]}
 sfxnames = ["basehit", "build", "enemyshoot", "playershoot", "select"]
 sfx = {}
 for name in sfxnames:
@@ -119,6 +123,8 @@ class EffectField(pygame.sprite.Sprite):
                     s.speed = s.attributes[2] * 0.5
                     s.fxcooldown = self.attributes[0]
                     s.effect = "slowness"
+                elif self.type == "fxf_damage":
+                    s.health -= 2
 
 class Tower(pygame.sprite.Sprite):
     def __init__(self, position, type, gamepos, fieldgrp):
@@ -133,6 +139,7 @@ class Tower(pygame.sprite.Sprite):
         self.target = None
         self.gpos = list(gamepos)
         self.cooldown = self.attributes[0]
+        self.effect = None
         self.rangesurface = self.rect
         self.health = self.attributes[2]
         self.maxhealth = self.health
@@ -175,7 +182,24 @@ class Tower(pygame.sprite.Sprite):
                         if not s.type == "base":
                             heffect(s.rect.center, 500, effectgrp, [85, 209, 72])
                 self.rect = oldrect
-            self.cooldown = self.attributes[0]
+            elif self.type.startswith("boost"):
+                oldrect = self.rect
+                self.rect = self.rangesurface
+                self.rect.center = oldrect.center
+                if pygame.sprite.spritecollide(self, towergrp, False):
+                    sprites = pygame.sprite.spritecollide(self, towergrp, False)
+                    for s in sprites:
+                        if self.type == "boost_cooldown":
+                            if not s.type == "base":
+                                s.effect = "cooldown"
+                        elif self.type == "boost_damage":
+                            if s.type.startswith("shooter"):
+                                s.effect = "damage"
+                self.rect = oldrect
+            if self.effect == "cooldown":
+                self.cooldown = round(self.attributes[0]*0.75)
+            else:
+                self.cooldown = self.attributes[0]
         if self.type.startswith("fxf"):
             self.attachedfield.rect.center = self.rect.center
             oldrect = self.rect
@@ -230,9 +254,9 @@ class Tower(pygame.sprite.Sprite):
                 self.rect.center = oldc
 
 class Bullet(pygame.sprite.Sprite):
-    def __init__(self, parent, position, velocity, rotation):
+    def __init__(self, parent, position, velocity, rotation, damagefactor=1):
         pygame.sprite.Sprite.__init__(self)
-        if parent.type.startswith("enemy"):
+        if parent.type.startswith("enemy") or parent.type == "wallshooter":
             self.image = pygame.image.load("./assets/graphics/enemybullet.png")
         else:
             self.image = pygame.image.load("./assets/graphics/bullet.png")
@@ -246,15 +270,16 @@ class Bullet(pygame.sprite.Sprite):
         self.attributes = bullets[self.parent.type]
         self.velocity = velocity
         self.mask = pygame.mask.from_surface(self.image)
+        self.damagefactor = damagefactor
     def update(self, enemygrp, towergrp, effectgrp, data):
         self.position += self.velocity
         self.rect.center = self.position.x, self.position.y
-        if not self.parent.type.startswith("enemy"):
+        if not self.parent.type.startswith("enemy") and not self.parent.type == "wallshooter":
             if not self.rect.colliderect(self.parent.rangesurface):
                 self.kill()
         if (self.rect.right < 0 or self.rect.left > 1280 or self.rect.top > 720 or self.rect.bottom < 0):
             self.kill()
-        if self.parent.type.startswith("enemy"):
+        if self.parent.type.startswith("enemy") or self.parent.type == "wallshooter":
             if pygame.sprite.spritecollide(self, towergrp, False):
                 sprite = pygame.sprite.spritecollide(self, towergrp, False)[0]
                 sprite.mask = pygame.mask.from_surface(sprite.image)
@@ -270,6 +295,7 @@ class Bullet(pygame.sprite.Sprite):
                     self.kill()
         else:
             if pygame.sprite.spritecollide(self, enemygrp, False):
+                print("in")
                 sprite = pygame.sprite.spritecollide(self, enemygrp, False)[0]
                 sprite.mask = pygame.mask.from_surface(sprite.image)
                 if pygame.sprite.collide_mask(self, sprite):
@@ -279,3 +305,4 @@ class Bullet(pygame.sprite.Sprite):
                         effect(sprite.rect.center, "+" + str(cash) + "B", -0.05, 500, effectgrp, [85, 209, 72])
                         data.addmoney += cash
                     self.kill()
+        self.effect = None

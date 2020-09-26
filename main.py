@@ -79,6 +79,22 @@ def Enemy(pos, type="enemy"):
         else:
             goto = GamePos(newenemy.closesttower("fxf", towergrp).rect.center)
             newenemy.targetqueue = newenemy.pathfinding(listmap, goto)
+    if str(type) == "enemyboost" or str(type) == "enemyboostflying":
+        newenemy = entities.Enemy([(pos[0] * 40) + 20, (pos[1] * 40) + 20], data.metadata["basepos"], pos, type)
+        if newenemy.closesttower("boost", towergrp) == None:
+            newenemy.targetqueue = newenemy.pathfinding(listmap, data.metadata["basepos"])
+        else:
+            goto = GamePos(newenemy.closesttower("boost", towergrp).rect.center)
+            newenemy.targetqueue = newenemy.pathfinding(listmap, goto)
+    if str(type) == "wallshooter":
+        newenemy = entities.Enemy([(pos[0] * 40) + 20, (pos[1] * 40) + 20], data.metadata["basepos"], pos, type)
+        if newenemy.closesttower("wall", towergrp) == None:
+            newenemy.targetqueue = newenemy.pathfinding(listmap, data.metadata["basepos"])
+        else:
+            goto = GamePos(newenemy.closesttower("wall", towergrp).rect.center)
+            newenemy.targetqueue = newenemy.pathfinding(listmap, goto)
+    if len(newenemy.targetqueue) == 0:
+        newenemy.targetqueue = newenemy.pathfinding(listmap, data.metadata["basepos"])
     newenemy.target = [((newenemy.targetqueue[0][0]+1)*40)-20, ((newenemy.targetqueue[0][1]+1)*40)-20]
     newenemy.targetqueue.pop(0)
     enemygrp.add(newenemy)
@@ -121,12 +137,20 @@ def normalname(name):
     nname = name
     if str(name) == "fxf_slowness":
         nname = "slowness field"
+    if str(name) == "fxf_damage":
+        nname = "damage field"
     if str(name) == "shooter_rapid":
         nname = "rapid fire turret"
     if str(name) == "shooter":
         nname = "basic turret"
     if str(name) == "shooter_sniper":
         nname = "sniper turret"
+    if str(name) == "boost_cooldown":
+        nname = "overclock booster"
+    if str(name) == "boost_damage":
+        nname = "damage booster"
+    if str(name) == "wall_strong":
+        nname = "cyberwall"
     return nname
 
 mouse = Mouse()
@@ -137,28 +161,32 @@ screen = "game"
 fullscreen = False
 fps = 60 #hopefully
 
-cash = 5000
+cash = 200
 projectedcash = 500
 path = []
 playnext = None
 currenttower = None
 wave = 0
 wavespawned = {}
-wavespawns = [[["enemyfxf",5,1000]], [["enemy",10,700]], [["enemy",7,1000],["enemy",7,600],["enemy",7,300]]]
+wavespawns = [[["enemy",5,1000]], [["enemy",10,700]], [["enemy",7,1000],["enemy",7,600],["enemy",7,300]], [["enemyshooter",2,1000], ["enemy",10,700]], [["enemyshooter",3,700], ["enemy",10,1000], ["enemy",5,700]], [["enemy",25,500]]]
 wavestarted = False
 keepspawning = False
 building = None
 buildimg = None
-buildingcosts = {"shooter" : 100, "shooter_rapid" : 125, "shooter_sniper" : 125, "wall" : 25, "healer" : 250, "fxf_slowness" : 500, "fxf_slowness" : 1200}
+buildingcosts = {"shooter" : 100, "shooter_rapid" : 125, "shooter_sniper" : 125, "wall" : 25, "wall_strong" : 100, "healer" : 250, "fxf_slowness" : 500, "fxf_damage" : 1200,
+                 "boost_cooldown" : 700, "boost_damage" : 1000}
 buildindex = 0
-builds = ["shooter", "shooter_rapid", "shooter_sniper", "wall", "healer", "fxf_slowness"]
+builds = ["shooter", "shooter_rapid", "shooter_sniper", "wall", "wall_strong", "healer", "fxf_slowness", "fxf_damage", "boost_cooldown", "boost_damage"]
 descriptions = {"shooter" : ["shoots 2 bullets a second, each bullet does", "10hp of damage. medium range."],
                 "shooter_rapid" : ["shoots around 7 bullets a second, each bullet does", "5hp of damage. short range."],
                 "shooter_sniper" : ["shoots around 1 bullet a second, each bullet does", "20hp of damage. long range."],
                 "wall" : ["i don't know, it exists? it protects stuff sometimes?", "it has 100 hitpoints, so that's pretty cool i guess."],
+                "wall_strong" : ["what now? it's a wall, what do you want me to say?", "it has 250hp now, and that is pretty cool i'd say."],
                 "healer" : ["this tower heals towers within a 2 tile radius.", "it heals 2hp every 5 seconds."],
                 "fxf_slowness" : ["all enemies that come within the effect field are", "slowed down to half speed for 2.5 seconds."],
-                "fxf_damage" : ["all enemies that come within the effect field take", "damage every 2.5 seconds they are inside."]}
+                "fxf_damage" : ["all enemies that come within the effect field take", "damage every 2.5 seconds they are inside."],
+                "boost_cooldown" : ["all towers in a 3 tile radius are sped", "up by 25%."],
+                "boost_damage" : ["all shooting towers in a 3 tile radius", "have their damage boosted 50%."]}
 ti = {}
 for tower in builds:
     ti[tower] = pygame.transform.scale2x(pygame.image.load(p["t"]+str(tower)+".png"))
@@ -488,7 +516,7 @@ while running:
         enemygrp.draw(window)
 
         ui.fontsize(24)
-        ui.text("level complete!", [640, 180], window, centered=True)
+        ui.text("you win!", [640, 180], window, centered=True)
 
     if screen == "paused":
         window.fill([255, 255, 255])
@@ -517,8 +545,18 @@ while running:
         window.blit(pausemenubackdrop, [460, 120])
         ui.fontsize(30)
         ui.color = [255, 0, 0]
-        ui.text("game over!", [640, 180], window, centered=True)
+        ui.text("game over!", [640, 120], window, centered=True)
         ui.color = [255, 255, 255]
+
+    if screen == "how":
+        window.fill([255, 255, 255])
+
+        tilemap.draw(window)
+    if screen == "settings":
+        window.fill([255, 255, 255])
+
+        tilemap.draw(window)
+
     pygame.display.flip()
     clock.tick(60)
     fps = clock.get_fps()
