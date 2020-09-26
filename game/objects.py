@@ -6,7 +6,7 @@ pygame.init()
 pygame.mixer.init()
 
 towers = {"shooter" : [500, 600, 50],
-          "shooter_rapid" : [150, 300, 40],
+          "shooter_rapid" : [250, 300, 40],
           "shooter_sniper" : [1250, 850, 45],
           "base" : [0, 0, 1000],
           "wall" : [0, 0, 100],
@@ -17,7 +17,7 @@ towers = {"shooter" : [500, 600, 50],
           "fxf_damage" : [20000, 280, 200],
           "boost_cooldown" : [0, 220, 150],
           "boost_damage" : [0, 220, 150]}
-bullets = {"shooter" : [10], "shooter_rapid" : [5], "shooter_sniper" : [20], "enemy":[5], "enemyflying":[7],  "enemyshooter":[5], "enemyshooterflying":[7], "enemyfxf":[6], "enemyfxfflying":[8], "wallshooter":[10], "enemyboost":[6], "enemyboostflying":[8]}
+bullets = {"shooter" : [5], "shooter_rapid" : [2], "shooter_sniper" : [10], "enemy":[5], "enemyflying":[7],  "enemyshooter":[5], "enemyshooterflying":[7], "enemyfxf":[6], "enemyfxfflying":[8], "wallshooter":[10], "enemyboost":[6], "enemyboostflying":[8]}
 sfxnames = ["basehit", "build", "enemyshoot", "playershoot", "select"]
 sfx = {}
 for name in sfxnames:
@@ -305,7 +305,7 @@ class Bullet(pygame.sprite.Sprite):
                 if pygame.sprite.collide_mask(self, sprite):
                     sprite.health -= self.attributes[0]
                     if sprite.health <= 0:
-                        cash = int(round(sprite.attributes[1] / random.randint(9, 11)))
+                        cash = int(round(sprite.attributes[1]*(random.randint(15, 30)/100)))
                         effect(sprite.rect.center, "+" + str(cash) + "B", -0.05, 500, effectgrp, [85, 209, 72])
                         data.addmoney += cash
                     self.kill()
