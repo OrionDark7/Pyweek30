@@ -13,6 +13,7 @@ shooters = ["enemy", "enemyflying", "enemyshooter", "enemyshooterflying", "enemy
 sfx = {}
 for name in sfxnames:
     sfx[name] = pygame.mixer.Sound("./assets/sfx/"+str(name)+".wav")
+    sfx[name].set_volume(0.3)
 #cooldown, hp, speed, airborne?
 
 def effect(position, text, speed, cooldown, effectgrp, color=[255, 255, 255]):
@@ -104,7 +105,8 @@ class Enemy(pygame.sprite.Sprite):
                 if pos != None:
                     backtraced.append(pos)
                 pos = self.visited[str(pos)]
-            backtraced.pop(0)
+            if not listmap[backtraced[0][0]][backtraced[0][1]] == -2:
+                backtraced.pop(0)
             backtraced.reverse()
         self.originaltarget = [(goalpos[0]*40)+20, (goalpos[1]*40)+20]
         return backtraced
@@ -157,7 +159,6 @@ class Enemy(pygame.sprite.Sprite):
                 if self.shootingtarget == None:
                     exitloop = True
                 if exitloop:
-                    print("exitloop")
                     if str(self.type) == "enemy" or str(self.type) == "enemyflying":
                         self.targetqueue = self.pathfinding(listmap, data.metadata["basepos"])
                     elif str(self.type) == "enemyshooter" or str(self.type) == "enemyshooterflying":
@@ -280,6 +281,6 @@ class Enemy(pygame.sprite.Sprite):
                         highlight.rect.center = oldpos
             if self.health <= 0:
                 self.kill()
-                cash = int(round(self.attributes[1]/random.randint(9, 11)))
-                effect(self.rect.center, "+"+str(cash)+"B", 0.05, 100, effectgrp, [85, 209, 72])
+                cash = int(round(self.attributes[1]*(random.randint(15, 30)/100)))
+                effect(self.rect.center, "+"+str(cash)+"B", -0.05, 100, effectgrp, [85, 209, 72])
                 data.addmoney += cash

@@ -197,10 +197,11 @@ for tower in builds:
     ti[tower] = pygame.transform.scale2x(pygame.image.load(p["t"]+str(tower)+".png"))
 ti["base"] = pygame.image.load(p["t"]+"base.png")
 
-sfxnames = ["basehit", "build", "enemyshoot", "playershoot", "select", "wavestart"]
+sfxnames = ["basehit", "build", "enemyshoot", "playershoot", "select", "wavestart", "delete"]
 sfx = {}
 for name in sfxnames:
     sfx[name] = pygame.mixer.Sound(p["s"]+str(name)+".wav")
+    sfx[name].set_volume(0.3)
 
 data = Data()
 data.metadata["basepos"] = [1, 9]
@@ -379,6 +380,14 @@ while running:
                 if event.key == pygame.K_ESCAPE:
                     screen = "paused"
                     sfx["select"].play()
+                if event.key == pygame.K_d:
+                    if highlight.gettower(towergrp) != None:
+                        data.addmoney += round(buildingcosts[highlight.gettower(towergrp).type]*0.5)
+                        pos = GamePos(highlight.rect.center)
+                        effect(highlight.rect.center,
+                               "+" + str(round(buildingcosts[highlight.gettower(towergrp).type] * 0.5)) + "B", -0.05,
+                               500, [85, 209, 72])
+                        highlight.gettower(towergrp).kill()
                 if event.key == pygame.K_m and building == None:
                     showmenu = not showmenu
                     sfx["select"].play()
@@ -464,6 +473,14 @@ while running:
         effectgrp.draw(window)
 
         if building != None:
+            if building.startswith("shooter"):
+                tempsurface = pygame.surface.Surface([objects.towers[building][1], objects.towers[building][1]])
+                tempsurface.fill([0, 0, 0])
+                tempsurface.set_colorkey([0, 0, 0])
+                tempsurface.convert_alpha()
+                tempsurface.set_alpha(64)
+                pygame.draw.circle(tempsurface, [255, 255, 255], [objects.towers[building][1]/2, objects.towers[building][1]/2], objects.towers[building][1]/2)
+                window.blit(tempsurface, [highlight.rect.centerx-objects.towers[building][1]/2, highlight.rect.centery-objects.towers[building][1]/2])
             window.blit(buildimg, [highlight.rect.centerx + buildrect[0], highlight.rect.centery + buildrect[1]])
         else:
             highlight.draw()
@@ -506,9 +523,12 @@ while running:
                 currenttower = highlight.gettower(towergrp)
                 window.blit(ti[currenttower.type], [600, 560])
                 ui.fontsize(21)
-                ui.text(normalname(str(currenttower.type)), [640, 640], window, centered=True)
+                ui.text(normalname(str(currenttower.type)), [640, 635], window, centered=True)
                 ui.fontsize(12)
-                ui.text(str(int(currenttower.health)) + "/" + str(int(currenttower.maxhealth)) + " health", [640, 680], window, centered=True)
+                ui.text(str(int(currenttower.health)) + "/" + str(int(currenttower.maxhealth)) + " health", [640, 675 ], window, centered=True)
+                ui.fontsize(9)
+                ui.text("press d to delete this tower. you will get a 50% refund", [640, 700],
+                        window, centered=True)
             else:
                 currenttower = None
                 gamebuttons.draw(window)
@@ -517,14 +537,20 @@ while running:
                 if not wavebutton in gamebuttons:
                     gamebuttons.add(wavebutton)
             ui.fontsize(18)
-        if data.addmoney > 0:
-            cash += 1
-            data.addmoney -= 1
-        elif data.addmoney < 0:
-            cash -= 1
-            data.addmoney += 1
+        if data.addmoney > 4:
+            cash += 4
+            data.addmoney -= 4
+        elif data.addmoney < -4:
+            cash -= 4
+            data.addmoney += 4
+        elif -3 < data.addmoney < 3:
+            cash += data.addmoney
+            data.addmoney = 0
+            projectedcash = cash
         else:
             projectedcash = cash
+
+        print(projectedcash)
 
         towergrp.update(bulletgrp, enemygrp, towergrp, effectgrp, clock)
         bulletgrp.update(enemygrp, towergrp, effectgrp, data)

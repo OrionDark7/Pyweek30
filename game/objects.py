@@ -14,7 +14,7 @@ towers = {"shooter" : [500, 600, 50],
           "healer" : [5000, 190, 50],
           "healer_plus" : [5000, 190, 50],
           "fxf_slowness" : [2500, 280, 200],
-          "fxf_damage" : [20000, 280, 200],
+          "fxf_damage" : [2500, 280, 200],
           "boost_cooldown" : [0, 220, 150],
           "boost_damage" : [0, 220, 150]}
 bullets = {"shooter" : [5], "shooter_rapid" : [2], "shooter_sniper" : [10], "enemy":[5], "enemyflying":[7],  "enemyshooter":[5], "enemyshooterflying":[7], "enemyfxf":[6], "enemyfxfflying":[8], "wallshooter":[10], "enemyboost":[6], "enemyboostflying":[8]}
@@ -22,6 +22,7 @@ sfxnames = ["basehit", "build", "enemyshoot", "playershoot", "select"]
 sfx = {}
 for name in sfxnames:
     sfx[name] = pygame.mixer.Sound("./assets/sfx/"+str(name)+".wav")
+    sfx[name].set_volume(0.3)
 #name - speed (ms/action), range (pixels), hp
 #name - damage
 
@@ -116,7 +117,7 @@ class EffectField(pygame.sprite.Sprite):
         if highlight.gettower(towergrp) == None:
             self.kill()
         highlight.rect.center = oldc2
-    def check(self, sprites):
+    def check(self, sprites, effectgrp):
         for s in sprites:
             s.mask = pygame.mask.from_surface(s.image)
             if pygame.sprite.collide_mask(self, s):
@@ -125,7 +126,8 @@ class EffectField(pygame.sprite.Sprite):
                     s.fxcooldown = self.attributes[0]
                     s.effect = "slowness"
                 elif self.type == "fxf_damage":
-                    s.health -= 2
+                    s.health -= 5
+                    heffect(s.rect.center, 500, effectgrp, [255, 128, 0])
 
 class Tower(pygame.sprite.Sprite):
     def __init__(self, position, type, gamepos, fieldgrp):
@@ -205,9 +207,10 @@ class Tower(pygame.sprite.Sprite):
                 oldrect = self.rect
                 self.rect = self.rangesurface
                 self.rect.center = oldrect.center
+                print("here")
                 if pygame.sprite.spritecollide(self, enemygrp, False):
                     sprites = pygame.sprite.spritecollide(self, enemygrp, False)
-                    self.attachedfield.check(sprites)
+                    self.attachedfield.check(sprites, effectgrp)
                 self.rect = oldrect
             if self.effect == "cooldown":
                 self.cooldown = round(self.attributes[0]*0.75)
@@ -220,7 +223,7 @@ class Tower(pygame.sprite.Sprite):
             self.rect.center = oldrect.center
             if pygame.sprite.spritecollide(self, enemygrp, False):
                 sprites = pygame.sprite.spritecollide(self, enemygrp, False)
-                self.attachedfield.check(sprites)
+                self.attachedfield.check(sprites, effectgrp)
             self.rect = oldrect
         elif self.type.startswith("shooter"):
             if self.target == None:
