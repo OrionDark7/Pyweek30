@@ -164,6 +164,7 @@ fullscreen = False
 prevscreen = "game"
 fps = 60 #hopefully
 
+howtoplay = pygame.image.load("./assets/graphics/story/howtoplay.png")
 cash = 20000
 projectedcash = 500
 path = []
@@ -591,6 +592,8 @@ while running:
         ui.color = [255, 255, 255]
         ui.fontsize(36)
         ui.text("HOW TO PLAY", [640, 10], window, centered=True)
+
+        window.blit(howtoplay, [15, 80])
 
     if screen == "settings":
         window.fill([255, 255, 255])

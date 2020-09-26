@@ -200,11 +200,20 @@ class Tower(pygame.sprite.Sprite):
                             if s.type.startswith("shooter"):
                                 s.effect = "damage"
                 self.rect = oldrect
+            elif self.type == "fxf_damage":
+                self.attachedfield.rect.center = self.rect.center
+                oldrect = self.rect
+                self.rect = self.rangesurface
+                self.rect.center = oldrect.center
+                if pygame.sprite.spritecollide(self, enemygrp, False):
+                    sprites = pygame.sprite.spritecollide(self, enemygrp, False)
+                    self.attachedfield.check(sprites)
+                self.rect = oldrect
             if self.effect == "cooldown":
                 self.cooldown = round(self.attributes[0]*0.75)
             else:
                 self.cooldown = self.attributes[0]
-        if self.type.startswith("fxf"):
+        if self.type == "fxf_slowness":
             self.attachedfield.rect.center = self.rect.center
             oldrect = self.rect
             self.rect = self.rangesurface
