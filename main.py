@@ -384,6 +384,7 @@ while running:
                     if highlight.gettower(towergrp) != None:
                         data.addmoney += round(buildingcosts[highlight.gettower(towergrp).type]*0.5)
                         pos = GamePos(highlight.rect.center)
+                        listmap[pos[0]][pos[1]] = 0
                         effect(highlight.rect.center,
                                "+" + str(round(buildingcosts[highlight.gettower(towergrp).type] * 0.5)) + "B", -0.05,
                                500, [85, 209, 72])
@@ -550,7 +551,6 @@ while running:
         else:
             projectedcash = cash
 
-        print(projectedcash)
 
         towergrp.update(bulletgrp, enemygrp, towergrp, effectgrp, clock)
         bulletgrp.update(enemygrp, towergrp, effectgrp, data)
