@@ -32,8 +32,7 @@ class Highlight(pygame.sprite.Sprite):
     def draw(self):
         global window
         window.blit(self.image, self.rect.topleft)
-    def gettower(self):
-        global towergrp
+    def gettower(self, towergrp):
         sprite = None
         oldrect = self.rect
         self.rect = self.smallrect
@@ -62,13 +61,24 @@ def switchbuild():
 
 def Enemy(pos, type="enemy"):
     global enemygrp, listmap
-    newenemy = entities.Enemy([(pos[0]*40)+20, (pos[1]*40)+20], pos, pos, type)
-    newenemy.targetqueue = newenemy.pathfinding(listmap, [1, 9])
+    if str(type) == "enemy" or str(type) == "enemyflying":
+        newenemy = entities.Enemy([(pos[0]*40)+20, (pos[1]*40)+20], data.metadata["basepos"], pos, type)
+        newenemy.targetqueue = newenemy.pathfinding(listmap, data.metadata["basepos"])
+    if str(type) == "enemyshooter" or str(type) == "enemyshooterflying":
+        newenemy = entities.Enemy([(pos[0] * 40) + 20, (pos[1] * 40) + 20], data.metadata["basepos"], pos, type)
+        print(newenemy.closesttower("shooter", towergrp))
+        if newenemy.closesttower("shooter", towergrp) == None:
+            newenemy.targetqueue = newenemy.pathfinding(listmap, data.metadata["basepos"])
+        else:
+            goto = GamePos(newenemy.closesttower("shooter", towergrp).rect.center)
+            newenemy.targetqueue = newenemy.pathfinding(listmap, goto)
+    newenemy.target = [((newenemy.targetqueue[0][0]+1)*40)-20, ((newenemy.targetqueue[0][1]+1)*40)-20]
+    newenemy.targetqueue.pop(0)
     enemygrp.add(newenemy)
 
 def CheckAccesible(pos):
     global enemygrp, listmap
-    newenemy = entities.Enemy([(pos[0]*40)+20, (pos[1]*40)+20], pos, pos)
+    newenemy = entities.Enemy([(pos[0]*40)+20, (pos[1]*40)+20], data.metadata["basepos"], pos, type="enemy")
     newenemy.targetqueue = newenemy.pathfinding(listmap, [1, 9])
     if newenemy.targetqueue == []:
         return False
@@ -120,7 +130,7 @@ screen = "game"
 fullscreen = False
 fps = 60 #hopefully
 
-cash = 500
+cash = 5000
 projectedcash = 500
 path = []
 playnext = None
@@ -423,8 +433,8 @@ while running:
                 ui.fontsize(8)
                 ui.text(str(descriptions[building][0]), [510, 675], window)
                 ui.text(str(descriptions[building][1]), [510, 695], window)
-            elif not highlight.gettower() == None:
-                currenttower = highlight.gettower()
+            elif not highlight.gettower(towergrp) == None:
+                currenttower = highlight.gettower(towergrp)
                 window.blit(ti[currenttower.type], [600, 560])
                 ui.fontsize(21)
                 ui.text(normalname(str(currenttower.type)), [640, 640], window, centered=True)
@@ -453,7 +463,7 @@ while running:
         towergrp.update(bulletgrp, enemygrp, towergrp, effectgrp, clock)
         bulletgrp.update(enemygrp, towergrp, effectgrp, data)
         ebulletgrp.update(enemygrp, towergrp, effectgrp, data)
-        enemygrp.update(fps, clock, data, ebulletgrp, effectgrp, highlight)
+        enemygrp.update(fps, clock.get_time(), data, ebulletgrp, effectgrp, towergrp, highlight)
         fieldgrp.update()
         effectgrp.update(clock)
         ui.fontsize(18)
@@ -494,9 +504,10 @@ while running:
         bulletgrp.draw(window)
         enemygrp.draw(window)
 
-        ui.fontsize(24)
+        window.blit(pausemenubackdrop, [460, 120])
+        ui.fontsize(30)
         ui.color = [255, 0, 0]
-        ui.text("level complete!", [640, 180], window, centered=True)
+        ui.text("game over!", [640, 180], window, centered=True)
         ui.color = [255, 255, 255]
     pygame.display.flip()
     clock.tick(60)

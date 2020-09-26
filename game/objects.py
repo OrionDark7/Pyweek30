@@ -12,7 +12,7 @@ towers = {"shooter" : [500, 600, 50],
           "wall" : [0, 0, 100],
           "healer" : [5000, 190, 50],
           "fxf_slowness" : [4000, 280, 100]}
-bullets = {"shooter" : [10], "shooter_rapid" : [5], "shooter_sniper" : [20], "enemy":[5]}
+bullets = {"shooter" : [10], "shooter_rapid" : [5], "shooter_sniper" : [20], "enemy":[5], "enemyflying":[7],  "enemyshooter":[5], "enemyshooterflying":[7]}
 sfxnames = ["basehit", "build", "enemyshoot", "playershoot", "select"]
 sfx = {}
 for name in sfxnames:
@@ -55,10 +55,10 @@ def GenerateMap():
     listmap[0][9] = -2
     listmap[1][8] = -2
     listmap[1][9] = -2
-    TowerGroup.add(Tower([20, 420], "shooter",  [0, 11], FieldGroup))
-    listmap[0][11] = 1
-    TowerGroup.add(Tower([20, 300], "shooter", [0, 8], FieldGroup))
-    listmap[0][8] = 1
+    #TowerGroup.add(Tower([20, 420], "shooter",  [0, 11], FieldGroup))
+    #listmap[0][11] = 1
+    #TowerGroup.add(Tower([20, 300], "shooter", [0, 8], FieldGroup))
+    #listmap[0][8] = 1
     return TileGroup, TowerGroup, listmap, metadata, base
 
 class Tile(pygame.sprite.Sprite):

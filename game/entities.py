@@ -5,8 +5,9 @@ from game import objects, ui
 pygame.init()
 pygame.mixer.init()
 
-enemies = {"enemy":[500, 50, 0.05, False], "enemyflying":[500, 50, 0.05, True]}
+enemies = {"enemy":[500, 50, 0.05, False], "enemyflying":[500, 50, 0.1, True], "enemyshooter":[500, 50, 0.05, False], "enemyshooterflying":[500, 50, 0.1, True]}
 sfxnames = ["basehit", "build", "enemyshoot", "playershoot", "select"]
+shooters = ["enemy", "enemyflying", "enemyshooter", "enemyshooterflying"]
 sfx = {}
 for name in sfxnames:
     sfx[name] = pygame.mixer.Sound("./assets/sfx/"+str(name)+".wav")
@@ -21,12 +22,14 @@ def effect(position, text, speed, cooldown, effectgrp, color=[255, 255, 255]):
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, position, target, gamepos, type="enemy"):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load("./assets/graphics/"+str(type)+".png")
+        self.image = pygame.image.load("./assets/graphics/enemies/"+str(type)+".png")
         self.originalimage = self.image
         self.rect = self.image.get_rect()
         self.rect.center = position
         self.position = Vector2(self.rect.centerx, self.rect.centery)
         self.target = [(target[0]*40)+20, (target[1]*40)+20]
+        print(str
+              (target) + "asdf")
         self.originaltarget = self.target
         self.targetqueue = []
         self.velocity = Vector2(target[0] - self.rect.centerx, target[1] - self.rect.centery).normalize()
@@ -37,6 +40,7 @@ class Enemy(pygame.sprite.Sprite):
         self.queue = []
         self.fxcooldown = 0
         self.attributes = enemies[type]
+        self.airborne = self.attributes[3]
         self.speed = self.attributes[2]
         self.health = self.attributes[1]
         self.shootcooldown = self.attributes[0]
@@ -44,6 +48,22 @@ class Enemy(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.rotated = 360
         self.shooting = False
+    def closesttower(self, type, towergrp):
+        distances = []
+        remainingtowers = []
+        for tower in towergrp:
+            if tower.type.startswith(str(type)):
+                remainingtowers.append(tower)
+                distance = math.sqrt(abs((tower.rect.centerx - self.rect.centerx) ^ 2 + (tower.rect.centery - self.rect.centery) ^ 2))
+                distances.append(distance)
+        try:
+            shortest = min(distances)
+        except:
+            return None
+        sindex = distances.index(shortest)
+        if len(remainingtowers) == 0:
+            return None
+        return remainingtowers[sindex]
     def pathfinding(self, listmap, goalpos):
         self.queue = []
         self.visited = {}
@@ -85,28 +105,21 @@ class Enemy(pygame.sprite.Sprite):
         except:
             outrange = True
         if not outrange:
-            if listmap[pos[0]][pos[1]] > 0:
-                #if listmap[pos[0]][pos[1]] == 2:
-                #    print("in")
-                #    returnval = True
-                #    goalpos = pos
-                #else:
+            if listmap[pos[0]][pos[1]] > 0 and not self.airborne:
                 returnval = False
                 self.visited[str(pos)] = lastpos
-                #print("LALALALALALA")
                 return returnval
-            elif listmap[pos[0]][pos[1]] == -2:
+            elif self.airborne:
+                returnval = False
+            elif listmap[pos[0]][pos[1]] == -2 and self.type == "enemy":
                 pos = goalpos
         else:
             returnval = False
-            #print(str(pos) + "< CHECK")
         if str(pos) in self.visited.keys():
             returnval = False
             return returnval
         else:
             self.visited[str(pos)] = lastpos
-        #print("GOT FAR")
-        #print(pos, goalpos)
         if pos == goalpos:
             returnval = True
         if not returnval:
@@ -119,14 +132,15 @@ class Enemy(pygame.sprite.Sprite):
             if not pos[0]-1 < 0 and not pos[1] < 0 and not pos[0]-1>31 and not pos[1]>15:
                 self.queue.append([[pos[0]-1, pos[1]], pos])
         return returnval
-    def update(self, fps, clock, data, bulletgrp, effectgrp, highlight):
+    def update(self, fps, clock, data, bulletgrp, effectgrp, towergrp, highlight):
         if self.shooting:
-            self.shootcooldown -= clock.get_time()
+            self.shootcooldown -= clock
         if self.fxcooldown > 0:
-            self.fxcooldown -= clock.get_time()
-        if self.shootcooldown <= 0:
+            self.fxcooldown -= clock
+        if self.shootcooldown <= 0 and self.type in shooters:
+            print("shootin'")
             pos = (self.rect.centerx + self.velocity.x * 10, self.rect.centery + self.velocity.y * 10)
-            tempvelocity = Vector2(self.target.rect.centerx - self.rect.centerx, self.target.rect.centery - self.rect.centery).normalize() * clock.get_fps() * 0.1
+            tempvelocity = Vector2(self.shootingtarget.rect.centerx - self.rect.centerx, self.shootingtarget.rect.centery - self.rect.centery).normalize() * fps * 0.1
             bulletgrp.add(objects.Bullet(self, pos, tempvelocity, self.rotation))
             self.shootcooldown = self.attributes[0]
             sfx["enemyshoot"].play()
@@ -142,7 +156,6 @@ class Enemy(pygame.sprite.Sprite):
             if not self.shooting:
                 self.position += self.velocity
                 self.rect.center = round(self.position[0]), round(self.position[1])
-                print(self.velocity)
                 if self.velocity.x == -3:
                     self.rotation = 180
                 if self.velocity.x == 3:
@@ -168,19 +181,21 @@ class Enemy(pygame.sprite.Sprite):
         oldc = self.rect.center
         self.rect = self.image.get_rect()
         self.rect.center = oldc
+        print(self.rect.center, self.target)
         if self.target[0]-5 < self.rect.centerx < self.target[0]+5 and self.target[1]-5 < self.rect.centery < self.target[1]+5:
             self.rect.center = self.target
-            if not len(self.targetqueue) == 0:
+            print(len(self.targetqueue) != 0)
+            if len(self.targetqueue) != 0:
                 self.target = self.targetqueue[0]
                 self.target = [((self.target[0]+1)*40)-20, ((self.target[1]+1)*40)-20]
                 self.targetqueue.pop(0)
-            else:
-                if self.type == "enemy":
-                    self.shootcooldown = self.attributes[0]
+            elif len(self.targetqueue) == 0:
+                if self.type in shooters:
                     self.shooting = True
                     oldpos = highlight.rect.center
                     highlight.rect.center = self.originaltarget
-                    self.shootingtarget = highlight.gettower()
+                    print(str(self.originaltarget) + str("OTAR"))
+                    self.shootingtarget = highlight.gettower(towergrp)
                     highlight.rect.center = oldpos
         if self.health <= 0:
             self.kill()
