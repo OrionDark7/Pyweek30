@@ -8,11 +8,11 @@ pygame.mixer.init()
 towers = {"shooter" : [500, 600, 50],
           "shooter_rapid" : [150, 300, 40],
           "shooter_sniper" : [1250, 850, 45],
-          "base" : [0, 0, 250],
+          "base" : [0, 0, 500],
           "wall" : [0, 0, 100],
           "healer" : [5000, 190, 50],
-          "fxf_slowness" : [4000, 280, 100]}
-bullets = {"shooter" : [10], "shooter_rapid" : [5], "shooter_sniper" : [20], "enemy":[5], "enemyflying":[7],  "enemyshooter":[5], "enemyshooterflying":[7]}
+          "fxf_slowness" : [2500, 280, 200]}
+bullets = {"shooter" : [10], "shooter_rapid" : [5], "shooter_sniper" : [20], "enemy":[5], "enemyflying":[7],  "enemyshooter":[5], "enemyshooterflying":[7], "enemyfxf":[6], "enemyfxfflying":[8]}
 sfxnames = ["basehit", "build", "enemyshoot", "playershoot", "select"]
 sfx = {}
 for name in sfxnames:
@@ -70,8 +70,6 @@ class Tile(pygame.sprite.Sprite):
         self.type = str(type)
         self.gpos = [self.rect.left/40, self.rect.top/40]
         self.occupied = False
-    def update(self):
-        pass
 
 class EffectField(pygame.sprite.Sprite):
     def __init__(self, type, position):
@@ -89,7 +87,7 @@ class EffectField(pygame.sprite.Sprite):
         self.type = str(type)
         self.scale = -2
         self.goingup = True
-    def update(self):
+    def update(self, highlight, towergrp):
         if self.rotation == 360:
             self.rotation = 0
         else:
@@ -108,6 +106,11 @@ class EffectField(pygame.sprite.Sprite):
         oldc = self.rect.center
         self.rect = self.image.get_rect()
         self.rect.center = oldc
+        oldc2 = highlight.rect.center
+        highlight.rect.center = self.rect.center
+        if highlight.gettower(towergrp) == None:
+            self.kill()
+        highlight.rect.center = oldc2
     def check(self, sprites):
         for s in sprites:
             s.mask = pygame.mask.from_surface(s.image)
@@ -115,6 +118,7 @@ class EffectField(pygame.sprite.Sprite):
                 if self.type == "fxf_slowness":
                     s.speed = s.attributes[2] * 0.5
                     s.fxcooldown = self.attributes[0]
+                    s.effect = "slowness"
 
 class Tower(pygame.sprite.Sprite):
     def __init__(self, position, type, gamepos, fieldgrp):

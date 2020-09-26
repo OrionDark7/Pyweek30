@@ -51,6 +51,7 @@ class Data():
     def __init__(self):
         self.addmoney = 0
         self.metadata = {}
+        self.gameover = False
 
 def switchbuild():
     global building, buildimg, buildrect, buildindex
@@ -66,11 +67,17 @@ def Enemy(pos, type="enemy"):
         newenemy.targetqueue = newenemy.pathfinding(listmap, data.metadata["basepos"])
     if str(type) == "enemyshooter" or str(type) == "enemyshooterflying":
         newenemy = entities.Enemy([(pos[0] * 40) + 20, (pos[1] * 40) + 20], data.metadata["basepos"], pos, type)
-        print(newenemy.closesttower("shooter", towergrp))
         if newenemy.closesttower("shooter", towergrp) == None:
             newenemy.targetqueue = newenemy.pathfinding(listmap, data.metadata["basepos"])
         else:
             goto = GamePos(newenemy.closesttower("shooter", towergrp).rect.center)
+            newenemy.targetqueue = newenemy.pathfinding(listmap, goto)
+    if str(type) == "enemyfxf" or str(type) == "enemyfxfflying":
+        newenemy = entities.Enemy([(pos[0] * 40) + 20, (pos[1] * 40) + 20], data.metadata["basepos"], pos, type)
+        if newenemy.closesttower("fxf", towergrp) == None:
+            newenemy.targetqueue = newenemy.pathfinding(listmap, data.metadata["basepos"])
+        else:
+            goto = GamePos(newenemy.closesttower("fxf", towergrp).rect.center)
             newenemy.targetqueue = newenemy.pathfinding(listmap, goto)
     newenemy.target = [((newenemy.targetqueue[0][0]+1)*40)-20, ((newenemy.targetqueue[0][1]+1)*40)-20]
     newenemy.targetqueue.pop(0)
@@ -137,12 +144,12 @@ playnext = None
 currenttower = None
 wave = 0
 wavespawned = {}
-wavespawns = [[["enemy",1,1000]], [["enemy",10,700]], [["enemy",7,1000],["enemy",7,600],["enemy",7,300]]]
+wavespawns = [[["enemyfxf",5,1000]], [["enemy",10,700]], [["enemy",7,1000],["enemy",7,600],["enemy",7,300]]]
 wavestarted = False
 keepspawning = False
 building = None
 buildimg = None
-buildingcosts = {"shooter" : 100, "shooter_rapid" : 125, "shooter_sniper" : 125, "wall" : 25, "healer" : 250, "fxf_slowness" : 500}
+buildingcosts = {"shooter" : 100, "shooter_rapid" : 125, "shooter_sniper" : 125, "wall" : 25, "healer" : 250, "fxf_slowness" : 500, "fxf_slowness" : 1200}
 buildindex = 0
 builds = ["shooter", "shooter_rapid", "shooter_sniper", "wall", "healer", "fxf_slowness"]
 descriptions = {"shooter" : ["shoots 2 bullets a second, each bullet does", "10hp of damage. medium range."],
@@ -150,7 +157,8 @@ descriptions = {"shooter" : ["shoots 2 bullets a second, each bullet does", "10h
                 "shooter_sniper" : ["shoots around 1 bullet a second, each bullet does", "20hp of damage. long range."],
                 "wall" : ["i don't know, it exists? it protects stuff sometimes?", "it has 100 hitpoints, so that's pretty cool i guess."],
                 "healer" : ["this tower heals towers within a 2 tile radius.", "it heals 2hp every 5 seconds."],
-                "fxf_slowness" : ["all enemies that come within the effect field are", "slowed down to half speed for 4 seconds."]}
+                "fxf_slowness" : ["all enemies that come within the effect field are", "slowed down to half speed for 2.5 seconds."],
+                "fxf_damage" : ["all enemies that come within the effect field take", "damage every 2.5 seconds they are inside."]}
 ti = {}
 for tower in builds:
     ti[tower] = pygame.transform.scale2x(pygame.image.load(p["t"]+str(tower)+".png"))
@@ -366,6 +374,7 @@ while running:
                     else:
                         window = pygame.display.set_mode([1280, 720])
         if event.type == pygame.USEREVENT and wavestarted and keepspawning and screen == "game":
+            #Enemy([31, random.randint(8, 9)], wavespawned[0][0])
             try:
                 Enemy([31, random.randint(8,9)], wavespawned[0][0])
             except:
@@ -384,6 +393,10 @@ while running:
             playnext = None
             pygame.time.set_timer(pygame.USEREVENT + 1, 60)
     if screen == "game":
+        if base.health <= 0:
+            screen = "gameover"
+            data.gameended = True
+
         window.fill([255, 255, 255])
 
         tilemap.draw(window)
@@ -457,14 +470,11 @@ while running:
         else:
             projectedcash = cash
 
-        if base.health <= 0:
-            screen = "gameover"
-
         towergrp.update(bulletgrp, enemygrp, towergrp, effectgrp, clock)
         bulletgrp.update(enemygrp, towergrp, effectgrp, data)
         ebulletgrp.update(enemygrp, towergrp, effectgrp, data)
-        enemygrp.update(fps, clock.get_time(), data, ebulletgrp, effectgrp, towergrp, highlight)
-        fieldgrp.update()
+        enemygrp.update(fps, clock.get_time(), data, ebulletgrp, effectgrp, towergrp, highlight, listmap)
+        fieldgrp.update(highlight, towergrp)
         effectgrp.update(clock)
         ui.fontsize(18)
 

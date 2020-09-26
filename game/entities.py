@@ -5,9 +5,10 @@ from game import objects, ui
 pygame.init()
 pygame.mixer.init()
 
-enemies = {"enemy":[500, 50, 0.05, False], "enemyflying":[500, 50, 0.1, True], "enemyshooter":[500, 50, 0.05, False], "enemyshooterflying":[500, 50, 0.1, True]}
+enemies = {"enemy":[500, 50, 0.05, False], "enemyflying":[500, 50, 0.1, True], "enemyshooter":[500, 50, 0.05, False], "enemyshooterflying":[500, 50, 0.1, True],
+           "enemyfxf":[500, 50, 0.05, False], "enemyfxfflying":[500, 50, 0.1, True]}
 sfxnames = ["basehit", "build", "enemyshoot", "playershoot", "select"]
-shooters = ["enemy", "enemyflying", "enemyshooter", "enemyshooterflying"]
+shooters = ["enemy", "enemyflying", "enemyshooter", "enemyshooterflying", "enemyfxf", "enemyfxfflying"]
 sfx = {}
 for name in sfxnames:
     sfx[name] = pygame.mixer.Sound("./assets/sfx/"+str(name)+".wav")
@@ -19,6 +20,9 @@ def effect(position, text, speed, cooldown, effectgrp, color=[255, 255, 255]):
     effectgrp.add(ui.effect(position, text, speed, cooldown, color))
     ui.fontsize(prevsize)
 
+def GamePos(pos):
+    return [int((pos[0]-20)/40), int((pos[1]-20)/40)]
+
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, position, target, gamepos, type="enemy"):
         pygame.sprite.Sprite.__init__(self)
@@ -28,8 +32,6 @@ class Enemy(pygame.sprite.Sprite):
         self.rect.center = position
         self.position = Vector2(self.rect.centerx, self.rect.centery)
         self.target = [(target[0]*40)+20, (target[1]*40)+20]
-        print(str
-              (target) + "asdf")
         self.originaltarget = self.target
         self.targetqueue = []
         self.velocity = Vector2(target[0] - self.rect.centerx, target[1] - self.rect.centery).normalize()
@@ -96,6 +98,7 @@ class Enemy(pygame.sprite.Sprite):
                 pos = self.visited[str(pos)]
             backtraced.pop(0)
             backtraced.reverse()
+        self.originaltarget = [(goalpos[0]*40)+20, (goalpos[1]*40)+20]
         return backtraced
     def checktile(self, listmap, pos, lastpos, goalpos):
         returnval = False
@@ -105,14 +108,13 @@ class Enemy(pygame.sprite.Sprite):
         except:
             outrange = True
         if not outrange:
-            if listmap[pos[0]][pos[1]] > 0 and not self.airborne:
-                returnval = False
-                self.visited[str(pos)] = lastpos
-                return returnval
-            elif self.airborne:
-                returnval = False
-            elif listmap[pos[0]][pos[1]] == -2 and self.type == "enemy":
-                pos = goalpos
+            if not pos == goalpos:
+                if listmap[pos[0]][pos[1]] > 0 and not self.airborne:
+                    returnval = False
+                    self.visited[str(pos)] = lastpos
+                    return returnval
+                elif listmap[pos[0]][pos[1]] == -2 and self.type == "enemy":
+                    pos = goalpos
         else:
             returnval = False
         if str(pos) in self.visited.keys():
@@ -132,13 +134,43 @@ class Enemy(pygame.sprite.Sprite):
             if not pos[0]-1 < 0 and not pos[1] < 0 and not pos[0]-1>31 and not pos[1]>15:
                 self.queue.append([[pos[0]-1, pos[1]], pos])
         return returnval
-    def update(self, fps, clock, data, bulletgrp, effectgrp, towergrp, highlight):
+    def update(self, fps, clock, data, bulletgrp, effectgrp, towergrp, highlight, listmap):
         if self.shooting:
             self.shootcooldown -= clock
+            oldpos = highlight.rect.center
+            highlight.rect.center = self.originaltarget
+            self.shootingtarget = highlight.gettower(towergrp)
+            highlight.rect.center = oldpos
+            exitloop = False
+            if self.shootingtarget == None:
+                exitloop = True
+            if exitloop:
+                print("exitloop")
+                if str(self.type) == "enemy" or str(self.type) == "enemyflying":
+                    self.targetqueue = self.pathfinding(listmap, data.metadata["basepos"])
+                elif str(self.type) == "enemyshooter" or str(self.type) == "enemyshooterflying":
+                    if self.closesttower("shooter", towergrp) == None:
+                        self.gpos = GamePos(self.rect.center)
+                        self.targetqueue = self.pathfinding(listmap, data.metadata["basepos"])
+                    else:
+                        goto = GamePos(self.closesttower("shooter", towergrp).rect.center)
+                        self.gpos = GamePos(self.rect.center)
+                        self.targetqueue = self.pathfinding(listmap, goto)
+                elif str(self.type) == "enemyfxf" or str(self.type) == "enemyfxfflying":
+                    if self.closesttower("fxf", towergrp) == None:
+                        self.gpos = GamePos(self.rect.center)
+                        self.targetqueue = self.pathfinding(listmap, data.metadata["basepos"])
+                    else:
+                        goto = GamePos(self.closesttower("fxf", towergrp).rect.center)
+                        self.gpos = GamePos(self.rect.center)
+                        self.targetqueue = self.pathfinding(listmap, goto)
+                self.target = [((self.targetqueue[0][0] + 1) * 40) - 20, ((self.targetqueue[0][1] + 1) * 40) - 20]
+                self.targetqueue.pop(0)
+                self.shooting = False
+                self.shootingtarget = None
         if self.fxcooldown > 0:
             self.fxcooldown -= clock
-        if self.shootcooldown <= 0 and self.type in shooters:
-            print("shootin'")
+        if self.shootcooldown <= 0 and self.type in shooters and self.shooting:
             pos = (self.rect.centerx + self.velocity.x * 10, self.rect.centery + self.velocity.y * 10)
             tempvelocity = Vector2(self.shootingtarget.rect.centerx - self.rect.centerx, self.shootingtarget.rect.centery - self.rect.centery).normalize() * fps * 0.1
             bulletgrp.add(objects.Bullet(self, pos, tempvelocity, self.rotation))
@@ -150,41 +182,52 @@ class Enemy(pygame.sprite.Sprite):
             self.effect = None
             try:
                 self.velocity = Vector2(self.target[0] - self.rect.centerx, self.target[1] - self.rect.centery).normalize() * fps * self.speed
-                self.velocity = Vector2(round(self.velocity.x), round(self.velocity.y))
             except:
                 pass
-            if not self.shooting:
-                self.position += self.velocity
-                self.rect.center = round(self.position[0]), round(self.position[1])
-                if self.velocity.x == -3:
-                    self.rotation = 180
-                if self.velocity.x == 3:
-                    self.rotation = 0
-                if self.velocity.y == -3:
-                    self.rotation = 90
-                if self.velocity.y == 3:
-                    self.rotation = 270
-                if self.rotated != self.rotation:
-                    if self.rotated < self.rotation:
-                        self.rotated += 10
-                    if self.rotated > self.rotation:
-                        self.rotated -= 10
         else:
-            self.rotation = math.atan(abs(self.shootingtarget.rect.centery - self.rect.centery) / abs(self.shootingtarget.rect.centerx - self.rect.centerx)) * 57.2958
-            self.rotation = math.round(self.rotation)
+            try:
+                self.velocity = Vector2(self.target[0] - self.rect.centerx, self.target[1] - self.rect.centery).normalize() * fps * self.speed
+            except:
+                pass
+        if not self.shooting:
+            self.position += self.velocity
+            self.rect.center = round(self.position[0]), round(self.position[1])
+            self.velocity = Vector2(round(self.velocity.x), round(self.velocity.y))
+            if self.velocity.x == -3:
+                self.rotation = 180
+            if self.velocity.x == 3:
+                self.rotation = 0
+            if self.velocity.y == -3:
+                self.rotation = 90
+            if self.velocity.y == 3:
+                self.rotation = 270
             if self.rotated != self.rotation:
                 if self.rotated < self.rotation:
-                    self.rotated += 5
+                    self.rotated += 10
                 if self.rotated > self.rotation:
-                    self.rotated -= 5
+                    self.rotated -= 10
+        if not self.shooting:
+            self.position += self.velocity
+            self.rect.center = round(self.position[0]), round(self.position[1])
+        if self.shooting:
+            self.rotation = math.atan(abs(self.shootingtarget.rect.centery - self.rect.centery) / abs(
+                self.shootingtarget.rect.centerx - self.rect.centerx)) * 57.2958
+            self.rotation = round(self.rotation)
+            if self.shootingtarget.rect.centerx < self.rect.centerx and self.shootingtarget.rect.centery < self.rect.centerx:
+                self.rotation = -self.rotation+180
+            if self.shootingtarget.rect.centerx < self.rect.centerx and self.shootingtarget.rect.centery > self.rect.centerx:
+                self.rotation = -self.rotation+180
+        if self.rotated != self.rotation:
+            if self.rotated < self.rotation:
+                self.rotated += 5
+            if self.rotated > self.rotation:
+                self.rotated -= 5
         self.image = pygame.transform.rotate(self.originalimage, round(self.rotation))
         oldc = self.rect.center
         self.rect = self.image.get_rect()
         self.rect.center = oldc
-        print(self.rect.center, self.target)
         if self.target[0]-5 < self.rect.centerx < self.target[0]+5 and self.target[1]-5 < self.rect.centery < self.target[1]+5:
             self.rect.center = self.target
-            print(len(self.targetqueue) != 0)
             if len(self.targetqueue) != 0:
                 self.target = self.targetqueue[0]
                 self.target = [((self.target[0]+1)*40)-20, ((self.target[1]+1)*40)-20]
@@ -194,7 +237,6 @@ class Enemy(pygame.sprite.Sprite):
                     self.shooting = True
                     oldpos = highlight.rect.center
                     highlight.rect.center = self.originaltarget
-                    print(str(self.originaltarget) + str("OTAR"))
                     self.shootingtarget = highlight.gettower(towergrp)
                     highlight.rect.center = oldpos
         if self.health <= 0:
