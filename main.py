@@ -1,7 +1,19 @@
 import pygame, random
 from game import objects, entities, ui
 
-#Page w/Font Used: https://www.dafont.com/8-bit-pusab.font?l[]=10&l[]=1
+"""
+L0ST_!N_CYBER$PACE
+v1.0
+
+by OrionDark7
+Copyright (c) 2020 Orion Willams
+See the LICENSE file for more info.
+
+pyweek.org/e/slime30
+oriondark7.com
+
+Page w/Font Used: https://www.dafont.com/8-bit-pusab.font?l[]=10&l[]=1
+"""
 
 pygame.init()
 pygame.mixer.init()
@@ -52,6 +64,8 @@ class Data():
         self.addmoney = 0
         self.metadata = {}
         self.gameover = False
+        self.wave = 0
+        self.base = None
 
 def switchbuild():
     global building, buildimg, buildrect, buildindex
@@ -63,38 +77,44 @@ def switchbuild():
 def Enemy(pos, type="enemy"):
     global enemygrp, listmap
     if str(type) == "enemy" or str(type) == "enemyflying":
-        newenemy = entities.Enemy([(pos[0]*40)+20, (pos[1]*40)+20], data.metadata["basepos"], pos, type)
+        newenemy = entities.Enemy([(pos[0]*40)+20, (pos[1]*40)+20], data.metadata["basepos"], pos, type, wave)
         newenemy.targetqueue = newenemy.pathfinding(listmap, data.metadata["basepos"])
+        newenemy.goingbase = True
     if str(type) == "enemyshooter" or str(type) == "enemyshooterflying":
-        newenemy = entities.Enemy([(pos[0] * 40) + 20, (pos[1] * 40) + 20], data.metadata["basepos"], pos, type)
+        newenemy = entities.Enemy([(pos[0] * 40) + 20, (pos[1] * 40) + 20], data.metadata["basepos"], pos, type, wave)
         if newenemy.closesttower("shooter", towergrp) == None:
             newenemy.targetqueue = newenemy.pathfinding(listmap, data.metadata["basepos"])
+            newenemy.goingbase = True
         else:
             goto = GamePos(newenemy.closesttower("shooter", towergrp).rect.center)
             newenemy.targetqueue = newenemy.pathfinding(listmap, goto)
     if str(type) == "enemyfxf" or str(type) == "enemyfxfflying":
-        newenemy = entities.Enemy([(pos[0] * 40) + 20, (pos[1] * 40) + 20], data.metadata["basepos"], pos, type)
+        newenemy = entities.Enemy([(pos[0] * 40) + 20, (pos[1] * 40) + 20], data.metadata["basepos"], pos, type, wave)
         if newenemy.closesttower("fxf", towergrp) == None:
             newenemy.targetqueue = newenemy.pathfinding(listmap, data.metadata["basepos"])
+            newenemy.goingbase = True
         else:
             goto = GamePos(newenemy.closesttower("fxf", towergrp).rect.center)
             newenemy.targetqueue = newenemy.pathfinding(listmap, goto)
     if str(type) == "enemyboost" or str(type) == "enemyboostflying":
-        newenemy = entities.Enemy([(pos[0] * 40) + 20, (pos[1] * 40) + 20], data.metadata["basepos"], pos, type)
+        newenemy = entities.Enemy([(pos[0] * 40) + 20, (pos[1] * 40) + 20], data.metadata["basepos"], pos, type, wave)
         if newenemy.closesttower("boost", towergrp) == None:
             newenemy.targetqueue = newenemy.pathfinding(listmap, data.metadata["basepos"])
+            newenemy.goingbase = True
         else:
             goto = GamePos(newenemy.closesttower("boost", towergrp).rect.center)
             newenemy.targetqueue = newenemy.pathfinding(listmap, goto)
     if str(type) == "wallshooter":
-        newenemy = entities.Enemy([(pos[0] * 40) + 20, (pos[1] * 40) + 20], data.metadata["basepos"], pos, type)
+        newenemy = entities.Enemy([(pos[0] * 40) + 20, (pos[1] * 40) + 20], data.metadata["basepos"], pos, type, wave)
         if newenemy.closesttower("wall", towergrp) == None:
             newenemy.targetqueue = newenemy.pathfinding(listmap, data.metadata["basepos"])
+            newenemy.goingbase = True
         else:
             goto = GamePos(newenemy.closesttower("wall", towergrp).rect.center)
             newenemy.targetqueue = newenemy.pathfinding(listmap, goto)
     if len(newenemy.targetqueue) == 0:
         newenemy.targetqueue = newenemy.pathfinding(listmap, data.metadata["basepos"])
+        newenemy.goingbase = True
     newenemy.target = [((newenemy.targetqueue[0][0]+1)*40)-20, ((newenemy.targetqueue[0][1]+1)*40)-20]
     newenemy.targetqueue.pop(0)
     enemygrp.add(newenemy)
@@ -165,27 +185,35 @@ prevscreen = "game"
 fps = 60 #hopefully
 
 howtoplay = pygame.image.load("./assets/graphics/story/howtoplay.png")
-cash = 20000
-projectedcash = 500
+cash = 200
+projectedcash = 200
 path = []
 playnext = None
 currenttower = None
 wave = 0
 wavespawned = {}
-wavespawns = [[["enemy",5,1000]], [["enemy",10,700]], [["enemy",7,1000],["enemy",7,600],["enemy",7,300]], [["enemyshooter",2,1000], ["enemy",10,700]], [["enemyshooter",3,700], ["enemy",10,1000], ["enemy",5,700]], [["enemy",25,500]]]
+wavespawns = [[["enemy",5,1000]], [["enemy",10,700]],
+              [["enemy",7,1000],["enemy",7,600],["enemy",7,300]],
+              [["enemyshooter",2,1000], ["enemy",10,700]],
+              [["enemyshooter",3,700], ["enemy",10,1000], ["enemy",5,700]],
+              [["enemy",25,500]],
+              [["enemyflying",3,1000], ["enemy", 10, 700]],
+              [["enemyflying",10,500], [["enemyshooterflying",3,700]]],
+              [["enemyflying",25,700], ["enemy",5,1000]],
+              [["enemyshooter",5,1000], ["enemyflying",5,700], ["enemyshooterflying",2,850], ["enemy",10,300]]]
 wavestarted = False
 keepspawning = False
 building = None
 buildimg = None
-buildingcosts = {"shooter" : 100, "shooter_rapid" : 125, "shooter_sniper" : 125, "wall" : 25, "wall_strong" : 100, "healer" : 250, "healer_plus" : 500,"fxf_slowness" : 500, "fxf_damage" : 1200,
-                 "boost_cooldown" : 700, "boost_damage" : 1000}
+buildingcosts = {"shooter" : 100, "shooter_rapid" : 200, "shooter_sniper" : 175, "wall" : 25, "wall_strong" : 100, "healer" : 500, "healer_plus" : 1000,"fxf_slowness" : 1000, "fxf_damage" : 1700,
+                 "boost_cooldown" : 1500, "boost_damage" : 2200}
 buildindex = 0
 builds = ["shooter", "shooter_rapid", "shooter_sniper", "wall", "wall_strong", "healer", "healer_plus", "fxf_slowness", "fxf_damage", "boost_cooldown", "boost_damage"]
 descriptions = {"shooter" : ["shoots 2 bullets a second, each bullet does", "10hp of damage. medium range."],
                 "shooter_rapid" : ["shoots around 7 bullets a second, each bullet does", "5hp of damage. short range."],
                 "shooter_sniper" : ["shoots around 1 bullet a second, each bullet does", "20hp of damage. long range."],
                 "wall" : ["i don't know, it exists? it protects stuff sometimes?", "it has 100 hitpoints, so that's pretty cool i guess."],
-                "wall_strong" : ["what now? it's a wall, what do you want me to say?", "it has 250hp now, and that is pretty cool i'd say."],
+                "wall_strong" : ["what now? it's a wall, what do you want me to say?", "it has 400hp now, and that is pretty cool i'd say."],
                 "healer" : ["this tower heals towers within a 2 tile radius.", "it heals 2hp every 5 seconds."],
                 "healer_plus" : ["this tower heals towers within a 2 tile radius.", "it heals 5hp every 5 seconds."],
                 "fxf_slowness" : ["all enemies that come within the effect field are", "slowed down to half speed for 2.5 seconds."],
@@ -214,6 +242,7 @@ wavebutton = ui.button("start wave", [640, 670], [255, 255, 255], [255, 255, 255
 pausebutton = ui.button("pause", [800, 670], [255, 255, 255], [255, 255, 255], True)
 ui.fontsize(8)
 hidebutton = ui.button("hide menu (m)", [640, 600], [255, 255, 255], [255, 255, 255], True)
+ebuildbutton = ui.button("exit builds (b)", [640, 600], [255, 255, 255], [255, 255, 255], True)
 gamebuttons.add(buildbutton)
 gamebuttons.add(wavebutton)
 gamebuttons.add(pausebutton)
@@ -257,6 +286,9 @@ listmap = []
 base = None
 tilemap, towergrp, listmap, metadata, base = objects.GenerateMap()
 
+data.wave = wave
+data.base = base
+
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -267,6 +299,7 @@ while running:
             if screen == "game":
                 gamebuttons.update(mouse)
                 hidebutton.update(mouse)
+                ebuildbutton.update(mouse)
             elif screen == "paused":
                 pausebuttons.update(mouse)
             elif screen == "howto":
@@ -296,7 +329,10 @@ while running:
                     if pquitbutton.click(mouse):
                         running = False
                 elif screen == "game":
-                    if building != None:
+                    if building != None and ebuildbutton.click(mouse):
+                        building = None
+                        sfx["select"].play()
+                    elif building != None:
                         newgpos = GamePos(highlight.rect.center)
                         if listmap[newgpos[0]][newgpos[1]]==0:
                             if not newgpos in path and wavestarted:
@@ -382,13 +418,16 @@ while running:
                     sfx["select"].play()
                 if event.key == pygame.K_d:
                     if highlight.gettower(towergrp) != None:
-                        data.addmoney += round(buildingcosts[highlight.gettower(towergrp).type]*0.5)
-                        pos = GamePos(highlight.rect.center)
-                        listmap[pos[0]][pos[1]] = 0
-                        effect(highlight.rect.center,
-                               "+" + str(round(buildingcosts[highlight.gettower(towergrp).type] * 0.5)) + "B", -0.05,
-                               500, [85, 209, 72])
-                        highlight.gettower(towergrp).kill()
+                        if highlight.gettower(towergrp).type != "base":
+                            data.addmoney += round(buildingcosts[highlight.gettower(towergrp).type]*0.5)
+                            pos = GamePos(highlight.rect.center)
+                            listmap[pos[0]][pos[1]] = 0
+                            effect(highlight.rect.center,
+                                   "+" + str(round(buildingcosts[highlight.gettower(towergrp).type] * 0.5)) + "B", -0.05,
+                                   500, [85, 209, 72])
+                            highlight.gettower(towergrp).kill()
+                        else:
+                            effect([640, 580], "are you trying to lose?", -0.05, 750, color=[255, 0, 0]) #seriously, why would you do this?
                 if event.key == pygame.K_m and building == None:
                     showmenu = not showmenu
                     sfx["select"].play()
@@ -459,6 +498,9 @@ while running:
             playnext = None
             pygame.time.set_timer(pygame.USEREVENT + 1, 60)
     if screen == "game":
+        data.wave = wave
+        data.base = base
+
         if base.health <= 0:
             screen = "gameover"
             data.gameended = True
@@ -491,22 +533,21 @@ while running:
             ui.text(str(cash) + " bitcoin", [480, 600], window, centered=True)
             if not wavestarted:
                 if building != None:
-                    ui.color = [255, 0, 0]
-                    ui.text("press b to cancel", [800, 600], window,
+                    ui.text("scroll to switch", [800, 600], window,
                             centered=True)
                     ui.color = [255, 255, 255]
                 else:
                     ui.text("start wave " + str(wave + 1), [800, 600], window, centered=True)
             else:
                 if building != None:
-                    ui.color = [255, 0, 0]
-                    ui.text("press b to cancel", [800, 600], window,
+                    ui.text("scroll to switch", [800, 600], window,
                             centered=True)
                     ui.color = [255, 255, 255]
                 else:
                     ui.text("wave " + str(wave), [800, 600], window,
                             centered=True)  # the x coordinate is a coincidence I swear
             if building != None:
+                ebuildbutton.draw(window)
                 window.blit(ti[building], [420, 630])
                 ui.fontsize(21)
                 ui.text(normalname(building), [510, 620], window)

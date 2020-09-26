@@ -22,11 +22,14 @@ def effect(position, text, speed, cooldown, effectgrp, color=[255, 255, 255]):
     effectgrp.add(ui.effect(position, text, speed, cooldown, color))
     ui.fontsize(prevsize)
 
+def heffect(position, cooldown, effectgrp, color=[255, 255, 255]):
+    effectgrp.add(ui.heffect(position, cooldown, color))
+
 def GamePos(pos):
     return [int((pos[0]-20)/40), int((pos[1]-20)/40)]
 
 class Enemy(pygame.sprite.Sprite):
-    def __init__(self, position, target, gamepos, type="enemy"):
+    def __init__(self, position, target, gamepos, type="enemy", wave=0):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.image.load("./assets/graphics/enemies/"+str(type)+".png")
         self.originalimage = self.image
@@ -46,12 +49,13 @@ class Enemy(pygame.sprite.Sprite):
         self.attributes = enemies[type]
         self.airborne = self.attributes[3]
         self.speed = self.attributes[2]
-        self.health = self.attributes[1]
+        self.health = self.attributes[1] + round(self.attributes[1] * wave * 0.05)
         self.shootcooldown = self.attributes[0]
         self.effect = None
         self.mask = pygame.mask.from_surface(self.image)
         self.rotated = 360
         self.shooting = False
+        self.goingbase = False
     def closesttower(self, type, towergrp):
         distances = []
         remainingtowers = []
@@ -107,6 +111,7 @@ class Enemy(pygame.sprite.Sprite):
                 pos = self.visited[str(pos)]
             if not listmap[backtraced[0][0]][backtraced[0][1]] == -2:
                 backtraced.pop(0)
+                self.goingbase = True
             backtraced.reverse()
         self.originaltarget = [(goalpos[0]*40)+20, (goalpos[1]*40)+20]
         return backtraced
@@ -149,6 +154,11 @@ class Enemy(pygame.sprite.Sprite):
         return returnval
     def update(self, fps, clock, data, bulletgrp, effectgrp, towergrp, highlight, listmap):
         if not data.gameover:
+            if self.rect.colliderect(data.base.rect) and self.goingbase:
+                data.base.health -= round(50/random.randint(2,4))
+                self.kill()
+                sfx["basehit"].play()
+                heffect(data.base.rect.center, 250, effectgrp, [255, 128, 0])
             if self.shooting:
                 self.shootcooldown -= clock
                 oldpos = highlight.rect.center
@@ -158,6 +168,7 @@ class Enemy(pygame.sprite.Sprite):
                 exitloop = False
                 if self.shootingtarget == None:
                     exitloop = True
+                self.goingbase = False
                 if exitloop:
                     if str(self.type) == "enemy" or str(self.type) == "enemyflying":
                         self.targetqueue = self.pathfinding(listmap, data.metadata["basepos"])
@@ -165,6 +176,7 @@ class Enemy(pygame.sprite.Sprite):
                         if self.closesttower("shooter", towergrp) == None:
                             self.gpos = GamePos(self.rect.center)
                             self.targetqueue = self.pathfinding(listmap, data.metadata["basepos"])
+                            self.goingbase = True
                         else:
                             goto = GamePos(self.closesttower("shooter", towergrp).rect.center)
                             self.gpos = GamePos(self.rect.center)
@@ -173,6 +185,7 @@ class Enemy(pygame.sprite.Sprite):
                         if self.closesttower("fxf", towergrp) == None:
                             self.gpos = GamePos(self.rect.center)
                             self.targetqueue = self.pathfinding(listmap, data.metadata["basepos"])
+                            self.goingbase = True
                         else:
                             goto = GamePos(self.closesttower("fxf", towergrp).rect.center)
                             self.gpos = GamePos(self.rect.center)
@@ -181,6 +194,7 @@ class Enemy(pygame.sprite.Sprite):
                         if self.closesttower("boost", towergrp) == None:
                             self.gpos = GamePos(self.rect.center)
                             self.targetqueue = self.pathfinding(listmap, data.metadata["basepos"])
+                            self.goingbase = True
                         else:
                             goto = GamePos(self.closesttower("boost", towergrp).rect.center)
                             self.gpos = GamePos(self.rect.center)
@@ -189,6 +203,7 @@ class Enemy(pygame.sprite.Sprite):
                         if self.closesttower("wall", towergrp) == None:
                             self.gpos = GamePos(self.rect.center)
                             self.targetqueue = self.pathfinding(listmap, data.metadata["basepos"])
+                            self.goingbase = True
                         else:
                             goto = GamePos(self.closesttower("wall", towergrp).rect.center)
                             self.gpos = GamePos(self.rect.center)
