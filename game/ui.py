@@ -98,6 +98,7 @@ class button(pygame.sprite.Sprite):
         self.clicked = False
         self.hovered = False
         self.position = position
+        self.centered = centered
     def click(self, mouse):
         self.clicked = False
         if self.rect.collidepoint(mouse.rect.topleft):
@@ -106,7 +107,10 @@ class button(pygame.sprite.Sprite):
     def update(self, mouse):
         self.hovered = False
         self.rect = self.image.get_rect()
-        self.rect.center = self.position
+        if self.centered:
+            self.rect.center = self.position
+        else:
+            self.rect.topleft = self.position
         if self.rect.collidepoint(mouse.rect.topleft):
             self.hovered = True
         if self.hovered:

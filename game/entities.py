@@ -59,6 +59,13 @@ class Enemy(pygame.sprite.Sprite):
                 remainingtowers.append(tower)
                 distance = math.sqrt(abs((tower.rect.centerx - self.rect.centerx) ^ 2 + (tower.rect.centery - self.rect.centery) ^ 2))
                 distances.append(distance)
+        if type == "boost":
+            for tower in towergrp:
+                if tower.type.startswith(str("healer")):
+                    remainingtowers.append(tower)
+                    distance = math.sqrt(abs(
+                        (tower.rect.centerx - self.rect.centerx) ^ 2 + (tower.rect.centery - self.rect.centery) ^ 2))
+                    distances.append(distance)
         try:
             shortest = min(distances)
         except:

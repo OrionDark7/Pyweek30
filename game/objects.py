@@ -12,6 +12,7 @@ towers = {"shooter" : [500, 600, 50],
           "wall" : [0, 0, 100],
           "wall_strong" : [0, 0, 250],
           "healer" : [5000, 190, 50],
+          "healer_plus" : [5000, 190, 50],
           "fxf_slowness" : [2500, 280, 200],
           "fxf_damage" : [20000, 280, 200],
           "boost_cooldown" : [0, 220, 150],
@@ -178,7 +179,10 @@ class Tower(pygame.sprite.Sprite):
                 if pygame.sprite.spritecollide(self, towergrp, False):
                     sprites = pygame.sprite.spritecollide(self, towergrp, False)
                     for s in sprites:
-                        s.heal(2)
+                        if self.type == "healer":
+                            s.heal(2)
+                        elif self.type == "healer_plus":
+                            s.heal(5)
                         if not s.type == "base":
                             heffect(s.rect.center, 500, effectgrp, [85, 209, 72])
                 self.rect = oldrect

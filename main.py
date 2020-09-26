@@ -151,6 +151,8 @@ def normalname(name):
         nname = "damage booster"
     if str(name) == "wall_strong":
         nname = "cyberwall"
+    if str(name) == "healer_plus":
+        nname = "healer plus"
     return nname
 
 mouse = Mouse()
@@ -159,9 +161,10 @@ highlight = Highlight()
 running = True
 screen = "game"
 fullscreen = False
+prevscreen = "game"
 fps = 60 #hopefully
 
-cash = 200
+cash = 20000
 projectedcash = 500
 path = []
 playnext = None
@@ -173,16 +176,17 @@ wavestarted = False
 keepspawning = False
 building = None
 buildimg = None
-buildingcosts = {"shooter" : 100, "shooter_rapid" : 125, "shooter_sniper" : 125, "wall" : 25, "wall_strong" : 100, "healer" : 250, "fxf_slowness" : 500, "fxf_damage" : 1200,
+buildingcosts = {"shooter" : 100, "shooter_rapid" : 125, "shooter_sniper" : 125, "wall" : 25, "wall_strong" : 100, "healer" : 250, "healer_plus" : 500,"fxf_slowness" : 500, "fxf_damage" : 1200,
                  "boost_cooldown" : 700, "boost_damage" : 1000}
 buildindex = 0
-builds = ["shooter", "shooter_rapid", "shooter_sniper", "wall", "wall_strong", "healer", "fxf_slowness", "fxf_damage", "boost_cooldown", "boost_damage"]
+builds = ["shooter", "shooter_rapid", "shooter_sniper", "wall", "wall_strong", "healer", "healer_plus", "fxf_slowness", "fxf_damage", "boost_cooldown", "boost_damage"]
 descriptions = {"shooter" : ["shoots 2 bullets a second, each bullet does", "10hp of damage. medium range."],
                 "shooter_rapid" : ["shoots around 7 bullets a second, each bullet does", "5hp of damage. short range."],
                 "shooter_sniper" : ["shoots around 1 bullet a second, each bullet does", "20hp of damage. long range."],
                 "wall" : ["i don't know, it exists? it protects stuff sometimes?", "it has 100 hitpoints, so that's pretty cool i guess."],
                 "wall_strong" : ["what now? it's a wall, what do you want me to say?", "it has 250hp now, and that is pretty cool i'd say."],
                 "healer" : ["this tower heals towers within a 2 tile radius.", "it heals 2hp every 5 seconds."],
+                "healer_plus" : ["this tower heals towers within a 2 tile radius.", "it heals 5hp every 5 seconds."],
                 "fxf_slowness" : ["all enemies that come within the effect field are", "slowed down to half speed for 2.5 seconds."],
                 "fxf_damage" : ["all enemies that come within the effect field take", "damage every 2.5 seconds they are inside."],
                 "boost_cooldown" : ["all towers in a 3 tile radius are sped", "up by 25%."],
@@ -224,6 +228,12 @@ pausebuttons.add(phowtobutton)
 pausebuttons.add(psettingsbutton)
 pausebuttons.add(pquitbutton)
 
+backbutton = ui.button("back", [20, 20], [255, 0, 0], [255, 0, 0])
+
+howtobackdrop = pygame.surface.Surface([1260, 700])
+howtobackdrop.fill([0, 0, 0, 128])
+howtobackdrop.set_alpha(128)
+
 pausemenubackdrop = pygame.surface.Surface([360, 480])
 pausemenubackdrop.fill([0, 0, 0, 128])
 pausemenubackdrop.set_alpha(128)
@@ -257,15 +267,32 @@ while running:
                 hidebutton.update(mouse)
             elif screen == "paused":
                 pausebuttons.update(mouse)
+            elif screen == "howto":
+                backbutton.update(mouse)
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1: #LEFT BUTTON
-                if screen == "paused":
+                if screen == "howto":
+                    if backbutton.click(mouse):
+                        screen = prevscreen
+                        sfx["select"].play()
+                elif screen == "settings":
+                    if backbutton.click(mouse):
+                        screen = prevscreen
+                        sfx["select"].play()
+                elif screen == "paused":
                     if resumebutton.click(mouse):
                         screen = "game"
                         sfx["select"].play()
+                    if phowtobutton.click(mouse):
+                        prevscreen = screen
+                        screen = "howto"
+                        sfx["select"].play()
+                    if psettingsbutton.click(mouse):
+                        prevscreen = screen
+                        screen = "settings"
+                        sfx["select"].play()
                     if pquitbutton.click(mouse):
                         running = False
-                        sfx["select"].play()
                 elif screen == "game":
                     if building != None:
                         newgpos = GamePos(highlight.rect.center)
@@ -528,6 +555,7 @@ while running:
         enemygrp.draw(window)
 
         window.blit(pausemenubackdrop, [460, 120])
+        ui.color = [255, 255, 255]
         ui.fontsize(30)
         ui.text("PAUSED", [640, 120], window, centered=True)
 
@@ -548,14 +576,30 @@ while running:
         ui.text("game over!", [640, 120], window, centered=True)
         ui.color = [255, 255, 255]
 
-    if screen == "how":
+    if screen == "howto":
         window.fill([255, 255, 255])
 
         tilemap.draw(window)
+        fieldgrp.draw(window)
+        towergrp.draw(window)
+        bulletgrp.draw(window)
+        enemygrp.draw(window)
+
+        window.blit(howtobackdrop, [10, 10])
+        backbutton.draw(window)
+
+        ui.color = [255, 255, 255]
+        ui.fontsize(36)
+        ui.text("HOW TO PLAY", [640, 10], window, centered=True)
+
     if screen == "settings":
         window.fill([255, 255, 255])
 
         tilemap.draw(window)
+        fieldgrp.draw(window)
+        towergrp.draw(window)
+        bulletgrp.draw(window)
+        enemygrp.draw(window)
 
     pygame.display.flip()
     clock.tick(60)
